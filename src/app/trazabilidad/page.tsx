@@ -3,20 +3,12 @@
 import { useState, useEffect, useMemo } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import { Sidebar } from '@/components/Sidebar'
-import { CookBadge } from '@/components/CookBadge'
+import { LoteCard, LotResult } from '@/components/LoteCard'
 
-const RESTAURANT_ID = '11111111-1111-1111-1111-111111111111'
+const PAGE_SIZE = 10
 
-type LotResult = {
-  id: string
-  lot_number: string
-  preparation_name: string
-  unit: string
-  quantity: number
-  logged_at: string
-  expires_at: string | null
-  cook_name: string | null
-}
+type SortKey = 'data' | 'lot'
+type SortDir = 'asc' | 'desc'
 
 function SearchIcon() {
   return (
@@ -27,40 +19,34 @@ function SearchIcon() {
   )
 }
 
-function formatDateTime(iso: string): string {
-  const date = new Date(iso)
-  return date.toLocaleString('ca-ES', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
-
-function formatExpiry(iso: string): string {
-  const date = new Date(iso)
-  const now = new Date()
-  const diff = date.getTime() - now.getTime()
-  if (diff < 0) return `Caducat ${formatDateTime(iso)}`
-  const label = date.toLocaleString('ca-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
-  return `Cad. ${label}`
-}
-
-
-function ExpiryBadge({ iso }: { iso: string }) {
-  const diff = new Date(iso).getTime() - Date.now()
-  const expired = diff < 0
-  const critical = !expired && diff < 4 * 3600 * 1000
-  const cls = expired
-    ? 'bg-red-100 text-red-700'
-    : critical
-    ? 'bg-yellow-100 text-yellow-700'
-    : 'bg-green-100 text-green-700'
+function SortButton({ label, active, dir, onClick }: { label: string; active: boolean; dir: SortDir; onClick: () => void }) {
   return (
-    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-sm font-semibold ${cls}`}>
-      {formatExpiry(iso)}
-    </span>
+    <button
+      onClick={onClick}
+      className={`h-10 px-4 rounded-xl text-sm font-semibold border transition-colors flex items-center gap-1.5 whitespace-nowrap ${
+        active
+          ? 'bg-gray-900 text-white border-gray-900'
+          : 'bg-white text-gray-600 border-[#e5e3de] hover:bg-gray-50'
+      }`}
+    >
+      {label}
+      {active && (
+        <svg className={`w-3.5 h-3.5 transition-transform ${dir === 'asc' ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      )}
+    </button>
+  )
+}
+
+function SkeletonCard() {
+  return (
+    <div className="bg-white rounded-xl border border-[#e5e3de] px-5 py-4 flex items-center gap-3 animate-pulse">
+      <span className="h-6 w-32 bg-blue-50 rounded-lg shrink-0" />
+      <span className="h-5 bg-gray-200 rounded flex-1" />
+      <span className="h-6 w-20 bg-gray-100 rounded-full shrink-0 hidden sm:block" />
+      <span className="h-4 w-4 bg-gray-100 rounded shrink-0" />
+    </div>
   )
 }
 
@@ -69,6 +55,11 @@ export default function TrazabilidadPage() {
   const [allResults, setAllResults] = useState<LotResult[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [page, setPage] = useState(1)
+  const [sortKey, setSortKey] = useState<SortKey>('data')
+  const [sortDir, setSortDir] = useState<SortDir>('desc')
+  const [cookFilter, setCookFilter] = useState<string | null>(null)
+  const [cookPickerOpen, setCookPickerOpen] = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -76,37 +67,17 @@ export default function TrazabilidadPage() {
 
       const { data: logs, error: logsErr } = await supabase
         .from('production_logs')
-        .select('id, preparation_id, quantity, logged_at, expires_at, batch_number, kitchen_user_id')
+        .select('id, quantity, logged_at, expires_at, batch_number, preparations(name, unit), kitchen_users(name)')
         .eq('type', 'production')
         .not('batch_number', 'is', null)
         .order('logged_at', { ascending: false })
-        .limit(200)
+        .limit(500)
 
       if (logsErr) { setError(logsErr.message); setLoading(false); return }
-      if (!logs || logs.length === 0) { setLoading(false); return }
 
-      const prepIds = [...new Set(logs.map((l) => l.preparation_id))]
-      const { data: preps, error: prepsErr } = await supabase
-        .from('preparations')
-        .select('id, name, unit')
-        .in('id', prepIds)
-        .eq('restaurant_id', RESTAURANT_ID)
-
-      if (prepsErr) { setError(prepsErr.message); setLoading(false); return }
-
-      const cookIds = [...new Set(logs.map((l) => l.kitchen_user_id).filter(Boolean))] as string[]
-      let cookMap = new Map<string, string>()
-      if (cookIds.length > 0) {
-        const { data: cooks } = await supabase
-          .from('kitchen_users')
-          .select('id, name')
-          .in('id', cookIds)
-        cookMap = new Map((cooks ?? []).map((c) => [c.id, c.name]))
-      }
-
-      const prepMap = new Map((preps ?? []).map((p) => [p.id, p]))
-      setAllResults(logs.map((log) => {
-        const prep = prepMap.get(log.preparation_id)
+      setAllResults((logs ?? []).map((log) => {
+        const prep = log.preparations as unknown as { name: string; unit: string } | null
+        const cook = log.kitchen_users as unknown as { name: string } | null
         return {
           id: log.id,
           lot_number: log.batch_number ?? '',
@@ -115,7 +86,7 @@ export default function TrazabilidadPage() {
           quantity: log.quantity,
           logged_at: log.logged_at,
           expires_at: log.expires_at,
-          cook_name: log.kitchen_user_id ? (cookMap.get(log.kitchen_user_id) ?? null) : null,
+          cook_name: cook?.name ?? null,
         }
       }))
       setLoading(false)
@@ -123,15 +94,55 @@ export default function TrazabilidadPage() {
     load()
   }, [])
 
-  const results = useMemo(() => {
+  // Reset to page 1 whenever filters/sort change
+  useEffect(() => { setPage(1) }, [query, sortKey, sortDir, cookFilter])
+
+  const cookNames = useMemo(
+    () => [...new Set(allResults.map((r) => r.cook_name).filter(Boolean) as string[])].sort((a, b) => a.localeCompare(b, 'ca')),
+    [allResults]
+  )
+
+  function toggleSort(key: SortKey) {
+    if (sortKey === key) {
+      setSortDir((d) => (d === 'desc' ? 'asc' : 'desc'))
+    } else {
+      setSortKey(key)
+      setSortDir('desc')
+    }
+  }
+
+  function selectCook(name: string) {
+    setCookFilter((prev) => (prev === name ? null : name))
+    setCookPickerOpen(false)
+  }
+
+  const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
-    if (!q) return allResults
-    return allResults.filter(
-      (r) =>
-        r.lot_number.toLowerCase().includes(q) ||
-        r.preparation_name.toLowerCase().includes(q)
-    )
-  }, [query, allResults])
+    let base = allResults
+
+    if (q) {
+      base = base.filter(
+        (r) =>
+          r.lot_number.toLowerCase().includes(q) ||
+          r.preparation_name.toLowerCase().includes(q)
+      )
+    }
+
+    if (cookFilter) {
+      base = base.filter((r) => r.cook_name === cookFilter)
+    }
+
+    return [...base].sort((a, b) => {
+      const cmp =
+        sortKey === 'data'
+          ? a.logged_at.localeCompare(b.logged_at)
+          : a.lot_number.localeCompare(b.lot_number)
+      return sortDir === 'desc' ? -cmp : cmp
+    })
+  }, [query, allResults, sortKey, sortDir, cookFilter])
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   return (
     <div className="flex min-h-screen">
@@ -143,7 +154,7 @@ export default function TrazabilidadPage() {
             <p className="text-base text-gray-500 mt-0.5 md:text-lg">Cerca per número de lot o preparació</p>
           </header>
 
-          <div className="relative mb-6">
+          <div className="relative mb-3">
             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
               <SearchIcon />
             </span>
@@ -156,67 +167,109 @@ export default function TrazabilidadPage() {
             />
           </div>
 
+          {/* Sort + filter bar */}
+          <div className="mb-3">
+            <div className="flex items-center gap-2 overflow-x-auto pb-1">
+              <span className="text-sm text-gray-400 shrink-0">Ordenar:</span>
+              <SortButton label="Data" active={sortKey === 'data'} dir={sortDir} onClick={() => toggleSort('data')} />
+              <SortButton label="Lot" active={sortKey === 'lot'} dir={sortDir} onClick={() => toggleSort('lot')} />
+
+              <span className="w-px h-5 bg-[#e5e3de] shrink-0 mx-1" />
+
+              {/* Cook filter button */}
+              <button
+                onClick={() => setCookPickerOpen((v) => !v)}
+                className={`h-10 px-4 rounded-xl text-sm font-semibold border transition-colors flex items-center gap-1.5 whitespace-nowrap ${
+                  cookFilter
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : cookPickerOpen
+                    ? 'bg-gray-100 text-gray-700 border-[#e5e3de]'
+                    : 'bg-white text-gray-600 border-[#e5e3de] hover:bg-gray-50'
+                }`}
+              >
+                {cookFilter ?? 'Cuiner'}
+                {cookFilter ? (
+                  <span
+                    className="ml-0.5 text-blue-200 hover:text-white"
+                    onClick={(e) => { e.stopPropagation(); setCookFilter(null); setCookPickerOpen(false) }}
+                  >
+                    ✕
+                  </span>
+                ) : (
+                  <svg className={`w-3.5 h-3.5 transition-transform ${cookPickerOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                )}
+              </button>
+            </div>
+
+            {/* Cook picker */}
+            {cookPickerOpen && cookNames.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-2 bg-white border border-[#e5e3de] rounded-xl px-4 py-3">
+                {cookNames.map((name) => (
+                  <button
+                    key={name}
+                    onClick={() => selectCook(name)}
+                    className={`h-9 px-4 rounded-full text-sm font-semibold border transition-colors ${
+                      cookFilter === name
+                        ? 'bg-blue-600 text-white border-blue-600'
+                        : 'bg-white text-gray-700 border-[#e5e3de] hover:bg-gray-50'
+                    }`}
+                  >
+                    {name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
           {error && <p className="text-red-600 text-base mb-4">{error}</p>}
 
           {loading && (
-            <p className="text-center text-gray-400 text-base py-12">Carregant…</p>
+            <div className="flex flex-col gap-3">
+              {Array.from({ length: PAGE_SIZE }).map((_, i) => <SkeletonCard key={i} />)}
+            </div>
           )}
 
-          {!loading && results.length === 0 && (
+          {!loading && filtered.length === 0 && (
             <div className="bg-white rounded-xl border border-[#e5e3de] px-6 py-10 text-center">
               <p className="text-gray-400 text-lg">
-                {query.trim()
-                  ? <>Cap lot trobat per <span className="font-mono font-semibold text-gray-600">{query.trim()}</span></>
+                {query.trim() || cookFilter
+                  ? 'Cap lot trobat amb els filtres aplicats'
                   : 'Sense lots registrats'}
               </p>
             </div>
           )}
 
-          {!loading && results.length > 0 && (
-            <div className="flex flex-col gap-3">
-              {results.map((r) => (
-                <div key={r.id} className="bg-white rounded-xl border border-[#e5e3de] overflow-hidden">
-                  {/* Header: lot number + prep name */}
-                  <div className="flex items-center justify-between gap-3 px-5 pt-4 pb-3 border-b border-[#f0ede8]">
-                    <div className="min-w-0 flex items-center gap-2.5">
-                      <span className="shrink-0 text-xs font-mono font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-2.5 py-1">
-                        {r.lot_number}
-                      </span>
-                      <h3 className="text-lg font-bold text-gray-900 leading-tight truncate">{r.preparation_name}</h3>
-                    </div>
-                  </div>
+          {!loading && filtered.length > 0 && (
+            <>
+              <div className="flex flex-col gap-3">
+                {paginated.map((r) => <LoteCard key={r.id} lot={r} />)}
+              </div>
 
-                  {/* Data rows */}
-                  <div className="divide-y divide-[#f0ede8]">
-                    <div className="flex items-center justify-between px-5 py-3">
-                      <span className="text-sm font-medium text-gray-400 uppercase tracking-wide">Producció</span>
-                      <div className="flex flex-col items-end gap-0.5">
-                        <span className="text-base font-bold tabular-nums text-gray-900">
-                          {r.quantity} <span className="text-sm font-medium text-gray-500">{r.unit}</span>
-                        </span>
-                        <span className="text-sm text-gray-400">{formatDateTime(r.logged_at)}</span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between px-5 py-3">
-                      <span className="text-sm font-medium text-gray-400 uppercase tracking-wide">Caducitat</span>
-                      {r.expires_at
-                        ? <ExpiryBadge iso={r.expires_at} />
-                        : <span className="text-sm text-gray-400">—</span>
-                      }
-                    </div>
-
-                    <div className="flex items-center justify-between px-5 py-3">
-                      <span className="text-sm font-medium text-gray-400 uppercase tracking-wide">Cuiner</span>
-                      {r.cook_name
-                        ? <CookBadge name={r.cook_name} />
-                        : <span className="text-sm text-gray-400">—</span>
-                      }
-                    </div>
-                  </div>
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between mt-6 gap-3">
+                  <button
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                    className="h-12 px-5 rounded-xl border border-[#e5e3de] bg-white text-base font-semibold text-gray-700 disabled:opacity-40 hover:bg-gray-50 transition-colors"
+                  >
+                    ← Anterior
+                  </button>
+                  <span className="text-sm text-gray-500 tabular-nums">
+                    {page} / {totalPages}
+                    <span className="text-gray-400 ml-1.5">({filtered.length} lots)</span>
+                  </span>
+                  <button
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages}
+                    className="h-12 px-5 rounded-xl border border-[#e5e3de] bg-white text-base font-semibold text-gray-700 disabled:opacity-40 hover:bg-gray-50 transition-colors"
+                  >
+                    Següent →
+                  </button>
                 </div>
-              ))}
-            </div>
+              )}
+            </>
           )}
         </div>
       </main>

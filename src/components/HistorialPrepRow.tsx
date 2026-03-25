@@ -19,10 +19,11 @@ type Props = {
   unit: string
   lot_count: number
   entries: LogDetail[]
+  defaultOpen?: boolean
 }
 
-export function HistorialPrepRow({ name, reached_par, total_produced, par_quantity, unit, lot_count, entries }: Props) {
-  const [open, setOpen] = useState(true)
+export function HistorialPrepRow({ name, reached_par, total_produced, par_quantity, unit, lot_count, entries, defaultOpen = false }: Props) {
+  const [open, setOpen] = useState(defaultOpen)
 
   return (
     <>
@@ -54,9 +55,10 @@ export function HistorialPrepRow({ name, reached_par, total_produced, par_quanti
                 {/* Mobile: 2 lines */}
                 <div className="md:hidden flex flex-col gap-1.5">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-mono font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-2 py-0.5">
-                      {e.lot_number ?? '—'}
-                    </span>
+                    {e.lot_number
+                      ? <span className="text-xs font-mono font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-2 py-0.5">{e.lot_number}</span>
+                      : <span className="h-5 w-16 bg-gray-100 rounded-lg" />
+                    }
                     <span className="text-sm tabular-nums text-gray-500">{e.time}</span>
                   </div>
                   <div className="flex items-center justify-between gap-2">
@@ -72,9 +74,10 @@ export function HistorialPrepRow({ name, reached_par, total_produced, par_quanti
 
                 {/* Desktop: 1 line */}
                 <div className="hidden md:flex items-center gap-3">
-                  <span className="text-xs font-mono font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-2 py-0.5 shrink-0">
-                    {e.lot_number ?? '—'}
-                  </span>
+                  {e.lot_number
+                    ? <span className="text-xs font-mono font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-2 py-0.5 shrink-0">{e.lot_number}</span>
+                    : <span className="h-5 w-16 bg-gray-100 rounded-lg shrink-0" />
+                  }
                   <span className="shrink-0">
                     {e.cook_name
                       ? <CookBadge name={e.cook_name} />

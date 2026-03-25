@@ -49,7 +49,6 @@ export default async function HistorialPage() {
   }
 
   const preps = (prepsData ?? []) as Pick<Preparation, 'id' | 'name' | 'par_quantity' | 'unit'>[]
-  const prepMap = new Map(preps.map((p) => [p.id, p]))
   const prepIds = preps.map((p) => p.id)
 
   if (prepIds.length === 0) {
@@ -71,10 +70,12 @@ export default async function HistorialPage() {
 
   const { data: logsData, error: logsError } = await supabase
     .from('production_logs')
-    .select('preparation_id, quantity, logged_at, kitchen_user_id, batch_number')
+    .select('preparation_id, quantity, logged_at, batch_number, kitchen_users(name)')
     .in('preparation_id', prepIds)
     .eq('type', 'production')
     .gte('logged_at', sevenDaysAgo.toISOString())
+    .order('logged_at', { ascending: false })
+    .limit(500)
 
   if (logsError) {
     return <pre className="p-8 text-red-500">{JSON.stringify(logsError, null, 2)}</pre>
@@ -82,19 +83,8 @@ export default async function HistorialPage() {
 
   const logs = logsData ?? []
 
-  // Resolve cook names
-  const cookIds = [...new Set(logs.map((l) => l.kitchen_user_id).filter(Boolean))] as string[]
-  let cookMap = new Map<string, string>()
-  if (cookIds.length > 0) {
-    const { data: cooks } = await supabase
-      .from('kitchen_users')
-      .select('id, name')
-      .in('id', cookIds)
-    cookMap = new Map((cooks ?? []).map((c) => [c.id, c.name]))
-  }
-
   // Group by date → by preparation_id
-  type DayLog = { quantity: number; kitchen_user_id: string | null; batch_number: string | null; logged_at: string }
+  type DayLog = { quantity: number; cook_name: string | null; batch_number: string | null; logged_at: string }
   const byDate = new Map<string, Map<string, DayLog[]>>()
 
   for (const log of logs) {
@@ -102,9 +92,11 @@ export default async function HistorialPage() {
     if (!byDate.has(dateStr)) byDate.set(dateStr, new Map())
     const byPrep = byDate.get(dateStr)!
     if (!byPrep.has(log.preparation_id)) byPrep.set(log.preparation_id, [])
+    const kus = log.kitchen_users as unknown as { name: string } | { name: string }[] | null
+    const cook_name = Array.isArray(kus) ? (kus[0]?.name ?? null) : (kus?.name ?? null)
     byPrep.get(log.preparation_id)!.push({
       quantity: log.quantity,
-      kitchen_user_id: log.kitchen_user_id,
+      cook_name,
       batch_number: log.batch_number,
       logged_at: log.logged_at,
     })
@@ -119,13 +111,7 @@ export default async function HistorialPage() {
     const byPrep = byDate.get(dateStr)
 
     const allDayLogs = byPrep ? [...byPrep.values()].flat() : []
-    const cook_names = [
-      ...new Set(
-        allDayLogs
-          .map((l) => l.kitchen_user_id && cookMap.get(l.kitchen_user_id))
-          .filter(Boolean) as string[]
-      ),
-    ]
+    const cook_names = [...new Set(allDayLogs.map((l) => l.cook_name).filter(Boolean) as string[])]
 
     const prepsForDay: PrepSummary[] = preps
       .filter((p) => byPrep?.has(p.id))
@@ -135,7 +121,7 @@ export default async function HistorialPage() {
         const lot_count = new Set(entries.map((e) => e.batch_number).filter(Boolean)).size
         const logDetails: LogDetail[] = entries.map((e) => ({
           lot_number: e.batch_number,
-          cook_name: e.kitchen_user_id ? (cookMap.get(e.kitchen_user_id) ?? null) : null,
+          cook_name: e.cook_name,
           quantity: e.quantity,
           unit: p.unit,
           time: new Date(e.logged_at).toLocaleTimeString('ca-ES', { hour: '2-digit', minute: '2-digit' }),
@@ -172,7 +158,7 @@ export default async function HistorialPage() {
           </header>
 
           <div className="flex flex-col gap-4 md:gap-5">
-            {days.map((day) => (
+            {days.map((day, i) => (
               <div
                 key={day.date}
                 className="bg-white rounded-xl border border-[#e5e3de] overflow-hidden"
@@ -207,6 +193,7 @@ export default async function HistorialPage() {
                         unit={prep.unit}
                         lot_count={prep.lot_count}
                         entries={prep.entries}
+                        defaultOpen={i < 2}
                       />
                     ))}
                   </ul>
