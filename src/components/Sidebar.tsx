@@ -177,7 +177,7 @@ export function Sidebar() {
       </aside>
 
       {/* Mobile bottom nav */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-gray-900 flex items-center z-20 border-t border-gray-800">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-gray-900 flex items-center z-50 border-t border-gray-800 transform-gpu">
         <MobileNavItem href="/" icon={<ListIcon />} label="Avui" active={isAvui} />
         <MobileNavItem href="/preparacions" icon={<IngredientsIcon />} label="Preparacions" active={isPreparaciones} />
         <MobileNavItem href="/historial" icon={<CalendarIcon />} label="Historial" active={isHistorial} />

@@ -1,5 +1,8 @@
 import { createServerClient } from '@/lib/supabase'
 import { Sidebar } from '@/components/Sidebar'
+import { CookBadge } from '@/components/CookBadge'
+import { CookAvatarGroup } from '@/components/CookAvatarGroup'
+import { HistorialPrepRow, LogDetail } from '@/components/HistorialPrepRow'
 import { Preparation } from '@/types/database'
 
 const RESTAURANT_ID = '11111111-1111-1111-1111-111111111111'
@@ -11,12 +14,15 @@ type PrepSummary = {
   par_quantity: number
   total_produced: number
   reached_par: boolean
+  lot_count: number
+  entries: LogDetail[]
 }
 
 type DaySummary = {
   date: string
   label: string
   preps: PrepSummary[]
+  cook_names: string[]
 }
 
 function formatDateLabel(dateStr: string): string {
@@ -65,7 +71,7 @@ export default async function HistorialPage() {
 
   const { data: logsData, error: logsError } = await supabase
     .from('production_logs')
-    .select('preparation_id, quantity, logged_at')
+    .select('preparation_id, quantity, logged_at, kitchen_user_id, batch_number')
     .in('preparation_id', prepIds)
     .eq('type', 'production')
     .gte('logged_at', sevenDaysAgo.toISOString())
@@ -76,14 +82,32 @@ export default async function HistorialPage() {
 
   const logs = logsData ?? []
 
-  // Group by date then by preparation_id, summing quantities
-  const byDate = new Map<string, Map<string, number>>()
+  // Resolve cook names
+  const cookIds = [...new Set(logs.map((l) => l.kitchen_user_id).filter(Boolean))] as string[]
+  let cookMap = new Map<string, string>()
+  if (cookIds.length > 0) {
+    const { data: cooks } = await supabase
+      .from('kitchen_users')
+      .select('id, name')
+      .in('id', cookIds)
+    cookMap = new Map((cooks ?? []).map((c) => [c.id, c.name]))
+  }
+
+  // Group by date → by preparation_id
+  type DayLog = { quantity: number; kitchen_user_id: string | null; batch_number: string | null; logged_at: string }
+  const byDate = new Map<string, Map<string, DayLog[]>>()
 
   for (const log of logs) {
     const dateStr = log.logged_at.slice(0, 10)
     if (!byDate.has(dateStr)) byDate.set(dateStr, new Map())
     const byPrep = byDate.get(dateStr)!
-    byPrep.set(log.preparation_id, (byPrep.get(log.preparation_id) ?? 0) + log.quantity)
+    if (!byPrep.has(log.preparation_id)) byPrep.set(log.preparation_id, [])
+    byPrep.get(log.preparation_id)!.push({
+      quantity: log.quantity,
+      kitchen_user_id: log.kitchen_user_id,
+      batch_number: log.batch_number,
+      logged_at: log.logged_at,
+    })
   }
 
   // Build days array for last 7 days (including days with no production)
@@ -92,12 +116,30 @@ export default async function HistorialPage() {
     const d = new Date()
     d.setDate(d.getDate() - i)
     const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-    const prepTotals = byDate.get(dateStr)
+    const byPrep = byDate.get(dateStr)
+
+    const allDayLogs = byPrep ? [...byPrep.values()].flat() : []
+    const cook_names = [
+      ...new Set(
+        allDayLogs
+          .map((l) => l.kitchen_user_id && cookMap.get(l.kitchen_user_id))
+          .filter(Boolean) as string[]
+      ),
+    ]
 
     const prepsForDay: PrepSummary[] = preps
-      .filter((p) => prepTotals?.has(p.id))
+      .filter((p) => byPrep?.has(p.id))
       .map((p) => {
-        const total = prepTotals!.get(p.id)!
+        const entries = byPrep!.get(p.id)!
+        const total = entries.reduce((sum, e) => sum + e.quantity, 0)
+        const lot_count = new Set(entries.map((e) => e.batch_number).filter(Boolean)).size
+        const logDetails: LogDetail[] = entries.map((e) => ({
+          lot_number: e.batch_number,
+          cook_name: e.kitchen_user_id ? (cookMap.get(e.kitchen_user_id) ?? null) : null,
+          quantity: e.quantity,
+          unit: p.unit,
+          time: new Date(e.logged_at).toLocaleTimeString('ca-ES', { hour: '2-digit', minute: '2-digit' }),
+        }))
         return {
           preparation_id: p.id,
           name: p.name,
@@ -105,6 +147,8 @@ export default async function HistorialPage() {
           par_quantity: p.par_quantity,
           total_produced: total,
           reached_par: total >= p.par_quantity,
+          lot_count,
+          entries: logDetails,
         }
       })
       .sort((a, b) => a.name.localeCompare(b.name, 'ca'))
@@ -113,6 +157,7 @@ export default async function HistorialPage() {
       date: dateStr,
       label: formatDateLabel(dateStr),
       preps: prepsForDay,
+      cook_names,
     })
   }
 
@@ -132,8 +177,20 @@ export default async function HistorialPage() {
                 key={day.date}
                 className="bg-white rounded-xl border border-[#e5e3de] overflow-hidden"
               >
-                <div className="px-4 py-3 border-b border-[#e5e3de] md:px-6">
+                <div className="px-4 py-3 border-b border-[#e5e3de] md:px-6 flex items-center justify-between gap-3 flex-wrap">
                   <h2 className="text-base font-semibold text-gray-800 capitalize">{day.label}</h2>
+                  {day.cook_names.length > 0 && (
+                    <>
+                      <div className="md:hidden">
+                        <CookAvatarGroup names={day.cook_names} />
+                      </div>
+                      <div className="hidden md:flex flex-wrap gap-1.5">
+                        {day.cook_names.map((name) => (
+                          <CookBadge key={name} name={name} />
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 {day.preps.length === 0 ? (
@@ -141,22 +198,16 @@ export default async function HistorialPage() {
                 ) : (
                   <ul className="divide-y divide-[#e5e3de]">
                     {day.preps.map((prep) => (
-                      <li
+                      <HistorialPrepRow
                         key={prep.preparation_id}
-                        className="flex items-center gap-3 px-4 py-3 md:px-6"
-                      >
-                        <span
-                          className={`w-3 h-3 rounded-full shrink-0 ${prep.reached_par ? 'bg-green-600' : 'bg-red-600'}`}
-                        />
-                        <span className="flex-1 text-base font-medium text-gray-900 min-w-0 truncate">
-                          {prep.name}
-                        </span>
-                        <span
-                          className={`text-sm font-semibold tabular-nums shrink-0 ${prep.reached_par ? 'text-green-700' : 'text-red-700'}`}
-                        >
-                          {prep.total_produced} / {prep.par_quantity} {prep.unit}
-                        </span>
-                      </li>
+                        name={prep.name}
+                        reached_par={prep.reached_par}
+                        total_produced={prep.total_produced}
+                        par_quantity={prep.par_quantity}
+                        unit={prep.unit}
+                        lot_count={prep.lot_count}
+                        entries={prep.entries}
+                      />
                     ))}
                   </ul>
                 )}
