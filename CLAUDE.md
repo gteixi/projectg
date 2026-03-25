@@ -30,7 +30,9 @@ Tablet de 10" montada en cocina profesional. La UI debe estar optimizada para:
 ## Base de datos (Supabase)
 - restaurant_id de prueba: 11111111-1111-1111-1111-111111111111
 - Vista principal: stock_actual_hoy (devuelve stock, par, falta_producir, proxima_caducidad)
-- Tabla de logs: production_logs (type: 'opening' | 'production')
+- Tabla de logs: production_logs (type: 'opening' | 'production' | 'adjustment')
+  - `adjustment`: cantidad negativa, siempre incluye el campo `notes` explicando la corrección
+  - Nunca se borran registros — todas las correcciones son registros nuevos de tipo adjustment
 
 ## Convenciones de código
 - Server Components por defecto, Client Components solo cuando hay interactividad

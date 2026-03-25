@@ -1,6 +1,15 @@
 export type Station = 'Fríos' | 'Fuegos' | 'Postres' | 'Panadería' | 'Entrantes'
-export type LogType = 'opening' | 'production'
+export type LogType = 'opening' | 'production' | 'adjustment'
 export type Role = 'chef' | 'jefe_partida' | 'cook'
+
+export interface KitchenUser {
+  id: string
+  restaurant_id: string
+  name: string
+  pin?: string
+  active: boolean
+  created_at: string
+}
 
 export interface Preparation {
   id: string
@@ -23,6 +32,8 @@ export interface ProductionLog {
   expires_at: string | null
   logged_at: string
   notes: string | null
+  batch_number: string | null
+  kitchen_user_id: string | null
 }
 
 export interface StockActualHoy {

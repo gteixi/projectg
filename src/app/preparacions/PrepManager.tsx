@@ -109,10 +109,7 @@ function PrepForm({
     `h-14 border rounded-xl px-4 text-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50 w-full ${
       errors[field] ? 'border-red-400' : 'border-[#e5e3de]'
     }`
-  const selectCls = (field: string) =>
-    `h-14 border rounded-xl px-4 text-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50 w-full ${
-      errors[field] ? 'border-red-400' : 'border-[#e5e3de]'
-    }`
+  const selectCls = `h-14 border border-[#e5e3de] rounded-xl px-4 text-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50 w-full`
   const labelCls = 'block text-base font-medium text-gray-600 mb-2'
   const errorCls = 'text-sm text-red-600 mt-1.5'
 
@@ -138,38 +135,22 @@ function PrepForm({
 
         <div>
           <label className={labelCls}>Unitat</label>
-          <select
-            value={form.unit}
-            onChange={(e) => set('unit', e.target.value as Unit)}
-            disabled={pending}
-            className={selectCls('unit')}
-          >
-            {UNITS.map((u) => (
-              <option key={u} value={u}>{u}</option>
-            ))}
+          <select value={form.unit} onChange={(e) => set('unit', e.target.value as Unit)} disabled={pending} className={selectCls}>
+            {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
           </select>
         </div>
 
         <div>
           <label className={labelCls}>Partida</label>
-          <select
-            value={form.station}
-            onChange={(e) => set('station', e.target.value as Station)}
-            disabled={pending}
-            className={selectCls('station')}
-          >
-            {STATIONS.map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
+          <select value={form.station} onChange={(e) => set('station', e.target.value as Station)} disabled={pending} className={selectCls}>
+            {STATIONS.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
         </div>
 
         <div>
           <label className={labelCls}>Quantitat par</label>
           <input
-            type="number"
-            min="0.1"
-            step="0.1"
+            type="number" min="0.1" step="0.1"
             value={form.par_quantity}
             onChange={(e) => set('par_quantity', e.target.value)}
             disabled={pending}
@@ -182,9 +163,7 @@ function PrepForm({
         <div>
           <label className={labelCls}>Caducitat (hores)</label>
           <input
-            type="number"
-            min="1"
-            step="1"
+            type="number" min="1" step="1"
             value={form.shelf_life_hours}
             onChange={(e) => set('shelf_life_hours', e.target.value)}
             disabled={pending}
@@ -232,10 +211,7 @@ export function PrepManager({ preparations }: { preparations: Preparation[] }) {
   function handleDeactivate(id: string) {
     startTransition(async () => {
       const result = await deactivatePreparation(id)
-      if (!result.error) {
-        router.refresh()
-        reset()
-      }
+      if (!result.error) { router.refresh(); reset() }
     })
   }
 
@@ -298,34 +274,24 @@ export function PrepManager({ preparations }: { preparations: Preparation[] }) {
                       {mode.type === 'deactivating' && mode.id === item.id ? (
                         <div className="flex items-center gap-2 mt-3">
                           <span className="text-base text-gray-600 shrink-0 mr-1">Desactivar?</span>
-                          <button
-                            onClick={() => handleDeactivate(item.id)}
-                            disabled={pending}
-                            className="flex-1 h-14 rounded-xl bg-red-600 text-white text-base font-semibold hover:bg-red-700 disabled:opacity-50"
-                          >
+                          <button onClick={() => handleDeactivate(item.id)} disabled={pending}
+                            className="flex-1 h-14 rounded-xl bg-red-600 text-white text-base font-semibold hover:bg-red-700 disabled:opacity-50">
                             {pending ? '…' : 'Sí'}
                           </button>
-                          <button
-                            onClick={reset}
-                            disabled={pending}
-                            className="flex-1 h-14 rounded-xl border border-[#e5e3de] text-gray-600 text-base hover:bg-gray-50 disabled:opacity-50"
-                          >
+                          <button onClick={reset} disabled={pending}
+                            className="flex-1 h-14 rounded-xl border border-[#e5e3de] text-gray-600 text-base hover:bg-gray-50 disabled:opacity-50">
                             No
                           </button>
                         </div>
                       ) : (
                         <div className="flex gap-2 mt-3">
-                          <button
-                            onClick={() => setMode({ type: 'edit', id: item.id })}
+                          <button onClick={() => setMode({ type: 'edit', id: item.id })}
                             disabled={mode.type === 'edit' && mode.id === item.id}
-                            className="flex-1 h-14 rounded-xl border border-[#e5e3de] text-gray-700 text-base font-medium hover:bg-gray-50 disabled:opacity-50"
-                          >
+                            className="flex-1 h-14 rounded-xl border border-[#e5e3de] text-gray-700 text-base font-medium hover:bg-gray-50 disabled:opacity-50">
                             Edita
                           </button>
-                          <button
-                            onClick={() => setMode({ type: 'deactivating', id: item.id })}
-                            className="flex-1 h-14 rounded-xl border border-red-200 text-red-600 text-base font-medium hover:bg-red-50"
-                          >
+                          <button onClick={() => setMode({ type: 'deactivating', id: item.id })}
+                            className="flex-1 h-14 rounded-xl border border-red-200 text-red-600 text-base font-medium hover:bg-red-50">
                             Desactiva
                           </button>
                         </div>
@@ -373,34 +339,24 @@ export function PrepManager({ preparations }: { preparations: Preparation[] }) {
                             {mode.type === 'deactivating' && mode.id === item.id ? (
                               <div className="flex items-center gap-2 justify-end">
                                 <span className="text-base text-gray-600 shrink-0">Desactivar?</span>
-                                <button
-                                  onClick={() => handleDeactivate(item.id)}
-                                  disabled={pending}
-                                  className="h-14 px-5 rounded-xl bg-red-600 text-white text-base font-semibold hover:bg-red-700 disabled:opacity-50 shrink-0"
-                                >
+                                <button onClick={() => handleDeactivate(item.id)} disabled={pending}
+                                  className="h-14 px-5 rounded-xl bg-red-600 text-white text-base font-semibold hover:bg-red-700 disabled:opacity-50 shrink-0">
                                   {pending ? '…' : 'Sí'}
                                 </button>
-                                <button
-                                  onClick={reset}
-                                  disabled={pending}
-                                  className="h-14 px-5 rounded-xl border border-[#e5e3de] text-gray-600 text-base hover:bg-gray-50 disabled:opacity-50 shrink-0"
-                                >
+                                <button onClick={reset} disabled={pending}
+                                  className="h-14 px-5 rounded-xl border border-[#e5e3de] text-gray-600 text-base hover:bg-gray-50 disabled:opacity-50 shrink-0">
                                   No
                                 </button>
                               </div>
                             ) : (
                               <div className="flex items-center gap-2 justify-end">
-                                <button
-                                  onClick={() => setMode({ type: 'edit', id: item.id })}
+                                <button onClick={() => setMode({ type: 'edit', id: item.id })}
                                   disabled={mode.type === 'edit' && mode.id === item.id}
-                                  className="h-14 px-5 rounded-xl border border-[#e5e3de] text-gray-700 text-base font-medium hover:bg-gray-50 disabled:opacity-50"
-                                >
+                                  className="h-14 px-5 rounded-xl border border-[#e5e3de] text-gray-700 text-base font-medium hover:bg-gray-50 disabled:opacity-50">
                                   Edita
                                 </button>
-                                <button
-                                  onClick={() => setMode({ type: 'deactivating', id: item.id })}
-                                  className="h-14 px-5 rounded-xl border border-red-200 text-red-600 text-base font-medium hover:bg-red-50"
-                                >
+                                <button onClick={() => setMode({ type: 'deactivating', id: item.id })}
+                                  className="h-14 px-5 rounded-xl border border-red-200 text-red-600 text-base font-medium hover:bg-red-50">
                                   Desactiva
                                 </button>
                               </div>
@@ -410,11 +366,7 @@ export function PrepManager({ preparations }: { preparations: Preparation[] }) {
                         {mode.type === 'edit' && mode.id === item.id && (
                           <tr>
                             <td colSpan={5} className="pb-4 pt-1">
-                              <PrepForm
-                                initial={item}
-                                onDone={reset}
-                                onCancel={reset}
-                              />
+                              <PrepForm initial={item} onDone={reset} onCancel={reset} />
                             </td>
                           </tr>
                         )}

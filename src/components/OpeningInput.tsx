@@ -3,6 +3,7 @@
 import { useRef, useState, useTransition } from 'react'
 import { logOpeningStock } from '@/lib/actions'
 import { truncUnit } from '@/lib/format'
+import { useAuth } from './AuthProvider'
 
 interface Props {
   preparationId: string
@@ -14,6 +15,7 @@ export function OpeningInput({ preparationId, unit }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const { activeUser } = useAuth()
 
   function handleSubmit() {
     const raw = inputRef.current?.value ?? ''
@@ -24,7 +26,7 @@ export function OpeningInput({ preparationId, unit }: Props) {
     }
     setError(null)
     startTransition(async () => {
-      const result = await logOpeningStock(preparationId, quantity)
+      const result = await logOpeningStock(preparationId, quantity, activeUser.id)
       if (result.error) {
         setError(result.error)
       } else {

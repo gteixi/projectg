@@ -3,7 +3,11 @@
 import { revalidatePath } from 'next/cache'
 import { createServerClient } from '@/lib/supabase'
 
-export async function logOpeningStock(preparationId: string, quantity: number): Promise<{ error: string | null }> {
+export async function logOpeningStock(
+  preparationId: string,
+  quantity: number,
+  kitchenUserId?: string | null,
+): Promise<{ error: string | null }> {
   if (quantity < 0) return { error: 'La quantitat no pot ser negativa' }
 
   const supabase = await createServerClient()
@@ -15,6 +19,7 @@ export async function logOpeningStock(preparationId: string, quantity: number): 
     logged_at: new Date().toISOString(),
     expires_at: null,
     notes: null,
+    kitchen_user_id: kitchenUserId ?? null,
   })
 
   if (error) return { error: error.message }
@@ -27,6 +32,8 @@ export async function logProduction(
   preparationId: string,
   quantity: number,
   shelfLifeHours: number,
+  lotNumber?: string,
+  kitchenUserId?: string | null,
 ): Promise<{ error: string | null }> {
   if (quantity <= 0) return { error: 'La quantitat ha de ser major que 0' }
 
@@ -41,6 +48,8 @@ export async function logProduction(
     logged_at: now.toISOString(),
     expires_at: expiresAt.toISOString(),
     notes: null,
+    batch_number: lotNumber?.trim() || null,
+    kitchen_user_id: kitchenUserId ?? null,
   })
 
   if (error) return { error: error.message }

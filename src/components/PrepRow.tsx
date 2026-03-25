@@ -72,7 +72,7 @@ export function PrepRow({ item }: { item: StockActualHoy }) {
             <OpeningInput preparationId={item.preparation_id} unit={item.unit} />
           </div>
         </td>
-        <td className="py-5 pl-3 align-middle w-[160px]">
+        <td className="py-5 pl-3 align-middle w-[280px]">
           <div className="flex justify-center">
             <button
               onClick={() => setProdOpen((v) => !v)}
@@ -90,10 +90,9 @@ export function PrepRow({ item }: { item: StockActualHoy }) {
       {prodOpen && (
         <tr className="border-b border-[#e5e3de] last:border-0 bg-blue-50/50">
           <td colSpan={6} className="px-6 py-4">
-            <div className="flex items-center gap-4">
-              <span className="text-base text-gray-500 shrink-0">
-                Registrar producció de{' '}
-                <strong className="text-gray-900">{item.name}</strong>:
+            <div className="flex flex-col gap-3">
+              <span className="text-base text-gray-500">
+                Registrar producció de <strong className="text-gray-900">{item.name}</strong>:
               </span>
               <ProductionButton
                 preparationId={item.preparation_id}
