@@ -105,7 +105,7 @@ export default function EquipoPage() {
           <header className="flex items-center justify-between mb-6">
             <div>
               <h1 className="text-2xl font-bold tracking-tight text-gray-900 md:text-3xl">Equip</h1>
-              <p className="text-base text-gray-500 mt-0.5 md:text-lg">Gestiona els cocineros del restaurant</p>
+              <p className="text-base text-gray-500 mt-0.5 md:text-lg">Gestiona els cuiners del restaurant</p>
             </div>
             <button
               onClick={() => { setShowAddForm((v) => !v); setAddError(null) }}
