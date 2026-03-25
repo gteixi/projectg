@@ -1,9 +1,12 @@
 import { createServerClient } from '@/lib/supabase'
 import { OpeningInput } from '@/components/OpeningInput'
 import { ProductionButton } from '@/components/ProductionButton'
+import { PrepRow } from '@/components/PrepRow'
 import { Sidebar } from '@/components/Sidebar'
 import { CollapsibleStation } from '@/components/CollapsibleStation'
 import { StockActualHoy, Station } from '@/types/database'
+import { truncUnit } from '@/lib/format'
+
 
 const RESTAURANT_ID = '11111111-1111-1111-1111-111111111111'
 const STATIONS: Station[] = ['Fríos', 'Fuegos', 'Postres']
@@ -127,7 +130,7 @@ function PrepCard({ item }: { item: StockActualHoy }) {
         </div>
         {item.falta_producir > 0 ? (
           <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-red-100 text-red-700 text-sm font-semibold tabular-nums shrink-0">
-            −{item.falta_producir} {item.unit}
+            −{item.falta_producir} {truncUnit(item.unit)}
           </span>
         ) : (
           <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-green-100 text-green-700 text-sm font-semibold shrink-0">
@@ -135,86 +138,33 @@ function PrepCard({ item }: { item: StockActualHoy }) {
           </span>
         )}
       </div>
-      <div className="flex items-center gap-4 text-sm text-gray-500 mb-3">
+      <div className="grid grid-cols-2 text-sm text-gray-500 mb-3">
         <span>
           Stock:{' '}
           <strong className="text-gray-800 tabular-nums">
-            {item.stock_total} {item.unit}
+            {item.stock_total} {truncUnit(item.unit)}
           </strong>
         </span>
         <span>
           Par:{' '}
           <strong className="text-gray-500 tabular-nums">
-            {item.par_quantity} {item.unit}
+            {item.par_quantity} {truncUnit(item.unit)}
           </strong>
         </span>
       </div>
-      <div className="flex flex-row flex-wrap gap-2 items-center justify-between">
+      <div className="flex flex-col gap-2">
         <OpeningInput preparationId={item.preparation_id} unit={item.unit} />
-        <div className="ml-auto">
-          <ProductionButton
-            preparationId={item.preparation_id}
-            unit={item.unit}
-            shelfLifeHours={item.shelf_life_hours}
-          />
-        </div>
+        <ProductionButton
+          preparationId={item.preparation_id}
+          unit={item.unit}
+          shelfLifeHours={item.shelf_life_hours}
+        />
       </div>
     </div>
   )
 }
 
 // Fila de taula per a pantalles grans
-function PrepRow({ item }: { item: StockActualHoy }) {
-  const isDone = item.falta_producir === 0
-  return (
-    <tr className={`border-b border-[#e5e3de] last:border-0 transition-colors ${isDone ? 'bg-green-50 hover:bg-green-100/60' : 'hover:bg-[#fafaf8]'}`}>
-      <td className="py-5 pr-6 align-middle">
-        <div className="flex items-center gap-3">
-          <Semaforo faltaProducir={item.falta_producir} parQuantity={item.par_quantity} />
-          <div className="flex flex-col gap-0.5">
-            <span className="text-lg font-semibold text-gray-900 leading-tight">{item.name}</span>
-            {item.proxima_caducidad && (
-              <span className="text-base font-semibold text-red-600 tabular-nums leading-tight">
-                {formatExpiry(item.proxima_caducidad)}
-              </span>
-            )}
-          </div>
-        </div>
-      </td>
-      <td className="py-5 px-4 align-middle text-right">
-        <span className="text-xl font-bold tabular-nums text-gray-800">{item.stock_total}</span>
-        <span className="text-sm text-gray-400 ml-1 max-w-[3rem] truncate inline-block align-middle">{item.unit}</span>
-      </td>
-      <td className="py-5 px-4 align-middle text-right">
-        <span className="text-base tabular-nums text-gray-400">{item.par_quantity}</span>
-        <span className="text-sm text-gray-400 ml-1 max-w-[3rem] truncate inline-block align-middle">{item.unit}</span>
-      </td>
-      <td className="py-5 px-4 align-middle text-right">
-        {item.falta_producir > 0 ? (
-          <span className="inline-flex items-center px-3 py-1 rounded-full bg-red-100 text-red-700 text-base font-semibold tabular-nums">
-            −{item.falta_producir} {item.unit}
-          </span>
-        ) : (
-          <span className="inline-flex items-center px-3 py-1 rounded-full bg-green-100 text-green-700 text-base font-semibold">
-            ✓
-          </span>
-        )}
-      </td>
-      <td className="py-5 px-3 align-middle">
-        <OpeningInput preparationId={item.preparation_id} unit={item.unit} />
-      </td>
-      <td className="py-5 pl-3 align-middle">
-        <div className="flex justify-end">
-          <ProductionButton
-            preparationId={item.preparation_id}
-            unit={item.unit}
-            shelfLifeHours={item.shelf_life_hours}
-          />
-        </div>
-      </td>
-    </tr>
-  )
-}
 
 function StationCard({ station, items }: { station: Station; items: StockActualHoy[] }) {
   const theme = STATION_THEMES[station]
@@ -268,8 +218,8 @@ function StationCard({ station, items }: { station: Station; items: StockActualH
               <th className="py-3 px-4 text-right text-xs font-semibold uppercase tracking-wider text-gray-400">Stock</th>
               <th className="py-3 px-4 text-right text-xs font-semibold uppercase tracking-wider text-gray-400">Par</th>
               <th className="py-3 px-4 text-right text-xs font-semibold uppercase tracking-wider text-gray-400">Falta</th>
-              <th className="py-3 px-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-400">Obertura</th>
-              <th className="py-3 pl-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-400">Producció</th>
+              <th className="py-3 px-4 text-center text-xs font-semibold uppercase tracking-wider text-gray-400">Obertura</th>
+              <th className="py-3 pl-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-400 w-[280px]">Producció</th>
             </tr>
           </thead>
           <tbody>

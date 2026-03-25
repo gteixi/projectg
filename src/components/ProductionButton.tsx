@@ -2,18 +2,26 @@
 
 import { useRef, useState, useTransition } from 'react'
 import { logProduction } from '@/lib/actions'
+import { truncUnit } from '@/lib/format'
 
 interface Props {
   preparationId: string
   unit: string
   shelfLifeHours: number
+  variant?: 'toggle' | 'form'
+  onClose?: () => void
 }
 
-export function ProductionButton({ preparationId, unit, shelfLifeHours }: Props) {
-  const [open, setOpen] = useState(false)
+export function ProductionButton({ preparationId, unit, shelfLifeHours, variant = 'toggle', onClose }: Props) {
+  const [open, setOpen] = useState(variant === 'form')
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  function close() {
+    setOpen(false)
+    onClose?.()
+  }
 
   function handleConfirm() {
     const raw = inputRef.current?.value ?? ''
@@ -28,10 +36,51 @@ export function ProductionButton({ preparationId, unit, shelfLifeHours }: Props)
       if (result.error) {
         setError(result.error)
       } else {
-        setOpen(false)
+        close()
       }
     })
   }
+
+  const formControls = (withClose: boolean) => (
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center gap-2">
+        <input
+          ref={inputRef}
+          type="number"
+          min="0.1"
+          step="0.1"
+          placeholder="quant."
+          autoFocus
+          disabled={pending}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') handleConfirm()
+            if (e.key === 'Escape') close()
+          }}
+          className="w-24 h-14 text-right text-lg border border-[#e5e3de] rounded-xl px-3 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50 bg-white shrink-0"
+        />
+        <span className="text-base text-gray-400 w-10 shrink-0">{truncUnit(unit)}</span>
+        <button
+          onClick={handleConfirm}
+          disabled={pending}
+          className="flex-1 md:flex-none md:px-5 h-14 rounded-xl bg-blue-600 text-white text-base font-semibold hover:bg-blue-700 disabled:opacity-50"
+        >
+          {pending ? '…' : 'OK'}
+        </button>
+        {withClose && (
+          <button
+            onClick={close}
+            disabled={pending}
+            className="flex-1 md:flex-none md:px-5 h-14 rounded-xl bg-red-600 text-white text-base font-semibold hover:bg-red-700 disabled:opacity-50"
+          >
+            ✕
+          </button>
+        )}
+      </div>
+      {error && <span className="text-sm text-red-600">{error}</span>}
+    </div>
+  )
+
+  if (variant === 'form') return formControls(false)
 
   if (!open) {
     return (
@@ -44,38 +93,5 @@ export function ProductionButton({ preparationId, unit, shelfLifeHours }: Props)
     )
   }
 
-  return (
-    <div className="flex items-center gap-2 flex-wrap">
-      <input
-        ref={inputRef}
-        type="number"
-        min="0.1"
-        step="0.1"
-        placeholder="quant."
-        autoFocus
-        disabled={pending}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') handleConfirm()
-          if (e.key === 'Escape') setOpen(false)
-        }}
-        className="flex-1 min-w-0 max-w-[3.5rem] h-14 text-right text-lg border border-[#e5e3de] rounded-xl px-3 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50 bg-white"
-      />
-      <span className="text-base text-gray-400 w-[3rem] truncate shrink-0">{unit}</span>
-      <button
-        onClick={handleConfirm}
-        disabled={pending}
-        className="h-14 px-6 rounded-xl bg-blue-600 text-white text-base font-semibold hover:bg-blue-700 disabled:opacity-50 shrink-0"
-      >
-        {pending ? '…' : 'OK'}
-      </button>
-      <button
-        onClick={() => setOpen(false)}
-        disabled={pending}
-        className="h-14 w-14 rounded-xl border border-[#e5e3de] text-gray-500 hover:bg-gray-50 disabled:opacity-50 flex items-center justify-center text-lg shrink-0"
-      >
-        ✕
-      </button>
-      {error && <span className="text-base text-red-600 w-full">{error}</span>}
-    </div>
-  )
+  return formControls(true)
 }

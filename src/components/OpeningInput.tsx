@@ -2,6 +2,7 @@
 
 import { useRef, useState, useTransition } from 'react'
 import { logOpeningStock } from '@/lib/actions'
+import { truncUnit } from '@/lib/format'
 
 interface Props {
   preparationId: string
@@ -41,26 +42,28 @@ export function OpeningInput({ preparationId, unit }: Props) {
   }
 
   return (
-    <div className="flex items-center gap-2 flex-wrap">
-      <input
-        ref={inputRef}
-        type="number"
-        min="0"
-        step="0.1"
-        placeholder="0"
-        disabled={pending}
-        onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
-        className="flex-1 min-w-0 max-w-[3.5rem] h-14 text-right text-lg border border-[#e5e3de] rounded-xl px-3 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50 bg-white"
-      />
-      <span className="text-base text-gray-400 w-[3rem] truncate shrink-0">{unit}</span>
-      <button
-        onClick={handleSubmit}
-        disabled={pending}
-        className="h-14 px-6 rounded-xl bg-gray-800 text-white text-base font-medium hover:bg-gray-700 disabled:opacity-50 shrink-0"
-      >
-        {pending ? '…' : 'OK'}
-      </button>
-      {error && <span className="text-sm text-red-600 w-full">{error}</span>}
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center gap-2">
+        <input
+          ref={inputRef}
+          type="number"
+          min="0"
+          step="0.1"
+          placeholder="0"
+          disabled={pending}
+          onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+          className="w-24 h-14 text-right text-lg border border-[#e5e3de] rounded-xl px-3 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50 bg-white shrink-0"
+        />
+        <span className="text-base text-gray-400 w-10 shrink-0">{truncUnit(unit)}</span>
+        <button
+          onClick={handleSubmit}
+          disabled={pending}
+          className="flex-1 md:flex-none md:px-5 h-14 rounded-xl bg-blue-600 text-white text-base font-medium hover:bg-gray-600 disabled:opacity-50"
+        >
+          {pending ? '…' : 'OK'}
+        </button>
+      </div>
+      {error && <span className="text-sm text-red-600">{error}</span>}
     </div>
   )
 }
