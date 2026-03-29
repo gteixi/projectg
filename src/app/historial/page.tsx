@@ -49,10 +49,12 @@ export default async function HistorialPage({
   const selectedDate = dia && /^\d{4}-\d{2}-\d{2}$/.test(dia) ? dia : today
   const isToday = selectedDate === today
 
+  const singleDay = !!dia
+  const numDays = singleDay ? 1 : HISTORIAL_DAYS
+
   const endDate = new Date(selectedDate + 'T23:59:59.999')
-  const startDate = new Date(endDate)
-  startDate.setDate(startDate.getDate() - (HISTORIAL_DAYS - 1))
-  startDate.setHours(0, 0, 0, 0)
+  const startDate = new Date(selectedDate + 'T00:00:00.000')
+  if (!singleDay) startDate.setDate(startDate.getDate() - (HISTORIAL_DAYS - 1))
   const sinceIso = startDate.toISOString()
   const untilIso = endDate.toISOString()
 
@@ -86,7 +88,7 @@ export default async function HistorialPage({
               <div>
                 <h1 className="text-2xl font-bold tracking-tight text-gray-900 md:text-3xl">Historial</h1>
                 <p className="text-base text-gray-500 mt-0.5 md:text-lg">
-                  {isToday ? 'Últims 7 dies' : `7 dies fins ${selectedDate}`}
+                  {singleDay ? selectedDate : 'Últims 7 dies'}
                 </p>
               </div>
               <DatePicker value={selectedDate} basePath="/historial" />
@@ -137,7 +139,7 @@ export default async function HistorialPage({
   }
 
   const days: DaySummary[] = []
-  for (let i = 0; i < HISTORIAL_DAYS; i++) {
+  for (let i = 0; i < numDays; i++) {
     const d = new Date(selectedDate + 'T12:00:00')
     d.setDate(d.getDate() - i)
     const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -184,7 +186,7 @@ export default async function HistorialPage({
             <div>
               <h1 className="text-2xl font-bold tracking-tight text-gray-900 md:text-3xl">Historial</h1>
               <p className="text-base text-gray-500 mt-0.5 md:text-lg">
-                {isToday ? 'Últims 7 dies' : `7 dies fins ${selectedDate}`}
+                {singleDay ? selectedDate : 'Últims 7 dies'}
               </p>
             </div>
             <DatePicker value={selectedDate} basePath="/historial" />
