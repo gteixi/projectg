@@ -44,6 +44,16 @@ function CalendarIcon() {
   )
 }
 
+function ChartIcon() {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="18" y1="20" x2="18" y2="10" />
+      <line x1="12" y1="20" x2="12" y2="4" />
+      <line x1="6" y1="20" x2="6" y2="14" />
+    </svg>
+  )
+}
+
 function NavItem({
   href,
   icon,
@@ -134,6 +144,7 @@ export function Sidebar({ urgentCount = 0 }: { urgentCount?: number }) {
   const isAfegir = pathname.startsWith('/afegir')
   const isHistorial = pathname.startsWith('/historial')
   const isTrazabilidad = pathname.startsWith('/trazabilidad')
+  const isInforme = pathname.startsWith('/informe')
 
   return (
     <>
@@ -143,6 +154,7 @@ export function Sidebar({ urgentCount = 0 }: { urgentCount?: number }) {
         <NavItem href="/afegir" icon={<AddIcon />} label="Afegir" active={isAfegir} />
         <NavItem href="/trazabilidad" icon={<LoteIcon />} label="Lote" active={isTrazabilidad} />
         <NavItem href="/historial" icon={<CalendarIcon />} label="Historial" active={isHistorial} />
+        <NavItem href="/informe" icon={<ChartIcon />} label="Informe" active={isInforme} />
         <div className="mt-auto" />
         <LogoutButton />
       </aside>
@@ -153,6 +165,7 @@ export function Sidebar({ urgentCount = 0 }: { urgentCount?: number }) {
         <MobileNavItem href="/afegir" icon={<AddIcon />} label="Afegir" active={isAfegir} />
         <MobileNavItem href="/trazabilidad" icon={<LoteIcon />} label="Lote" active={isTrazabilidad} />
         <MobileNavItem href="/historial" icon={<CalendarIcon />} label="Historial" active={isHistorial} />
+        <MobileNavItem href="/informe" icon={<ChartIcon />} label="Informe" active={isInforme} />
       </nav>
     </>
   )
