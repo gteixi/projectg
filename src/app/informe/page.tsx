@@ -90,7 +90,7 @@ export default async function InformePage({
       <SidebarServer />
       <main className="flex-1 min-h-screen bg-[#f8f7f4] pb-20 md:ml-[120px] md:pb-0">
         <div className="max-w-5xl mx-auto px-4 py-5 md:px-6 md:py-7">
-          <header className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <header className="mb-6 flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold tracking-tight text-gray-900 md:text-3xl">Informe</h1>
               <p className="text-base text-gray-500 mt-0.5 md:text-lg">
