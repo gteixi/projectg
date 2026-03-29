@@ -88,7 +88,7 @@ export default async function HistorialPage({
               <div>
                 <h1 className="text-2xl font-bold tracking-tight text-gray-900 md:text-3xl">Historial</h1>
                 <p className="text-base text-gray-500 mt-0.5 md:text-lg">
-                  {singleDay ? selectedDate : 'Últims 7 dies'}
+                  {singleDay ? formatDateLabel(selectedDate) : 'Últims 7 dies'}
                 </p>
               </div>
               <DatePicker value={selectedDate} basePath="/historial" />
@@ -186,7 +186,7 @@ export default async function HistorialPage({
             <div>
               <h1 className="text-2xl font-bold tracking-tight text-gray-900 md:text-3xl">Historial</h1>
               <p className="text-base text-gray-500 mt-0.5 md:text-lg">
-                {singleDay ? selectedDate : 'Últims 7 dies'}
+                {singleDay ? formatDateLabel(selectedDate) : 'Últims 7 dies'}
               </p>
             </div>
             <DatePicker value={selectedDate} basePath="/historial" />
