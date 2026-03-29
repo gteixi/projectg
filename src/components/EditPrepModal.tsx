@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { updatePreparation, deactivatePreparation } from '@/lib/prep-actions'
+import { suggestShelfLife } from '@/lib/ai-actions'
 import { type Station, type StockActualHoy } from '@/types/database'
 import { STATIONS, UNITS, type Unit, MIN_PREP_NAME_LENGTH } from '@/lib/constants'
 
@@ -19,9 +20,27 @@ export function EditPrepModal({ item, onClose }: Props): React.JSX.Element {
   const [station, setStation] = useState<Station>(item.station)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [serverError, setServerError] = useState<string | null>(null)
+  const [suggesting, setSuggesting] = useState(false)
+  const [suggestionReason, setSuggestionReason] = useState<string | null>(null)
   const [confirmDeactivate, setConfirmDeactivate] = useState(false)
   const [pending, startTransition] = useTransition()
   const router = useRouter()
+
+  async function handleSuggest(): Promise<void> {
+    if (name.trim().length < 2) return
+    setSuggesting(true)
+    setSuggestionReason(null)
+    const result = await suggestShelfLife(name)
+    setSuggesting(false)
+    if (result.suggestion) {
+      if (result.suggestion.hours !== null) {
+        setShelfLifeHours(String(result.suggestion.hours))
+      }
+      setSuggestionReason(result.suggestion.reasoning)
+    } else if (result.error) {
+      setServerError(result.error)
+    }
+  }
 
   function handleClose(): void {
     if (pending) return
@@ -126,7 +145,25 @@ export function EditPrepModal({ item, onClose }: Props): React.JSX.Element {
           </div>
 
           <div>
-            <label className={labelCls}>Caducitat (hores) <span className="text-gray-400 font-normal">— opcional</span></label>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-base font-medium text-gray-600">Caducitat (hores) <span className="text-gray-400 font-normal">— opcional</span></label>
+              <button
+                type="button"
+                onClick={handleSuggest}
+                disabled={pending || suggesting || name.trim().length < 2}
+                className="h-9 px-3.5 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-semibold hover:from-blue-700 hover:to-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5 shadow-sm mb-2"
+              >
+                {suggesting ? (
+                  <span className="inline-block w-4 h-4 border-2 border-white/70 border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16"><path d="M8 1l1.5 3.5L13 6l-3.5 1.5L8 11 6.5 7.5 3 6l3.5-1.5L8 1z" fill="currentColor"/></svg>
+                )}
+                Suggerir
+              </button>
+            </div>
+            {suggestionReason && (
+              <p className="text-sm text-gray-500 mb-2 italic">{suggestionReason}</p>
+            )}
             <input
               type="number" min="1" step="1"
               value={shelfLifeHours}
