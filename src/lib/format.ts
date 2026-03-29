@@ -28,7 +28,8 @@ export function formatTime(iso: string): string {
 export function formatDateLabel(dateStr: string): string {
   const [year, month, day] = dateStr.split('-').map(Number)
   const date = new Date(year, month - 1, day)
-  return date.toLocaleDateString(LOCALE, { weekday: 'long', day: 'numeric', month: 'long' })
+  const label = date.toLocaleDateString(LOCALE, { weekday: 'long', day: 'numeric', month: 'long' })
+  return label.charAt(0).toUpperCase() + label.slice(1)
 }
 
 export function formatExpiryShort(isoDate: string): string {
