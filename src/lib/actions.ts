@@ -2,58 +2,45 @@
 
 import { revalidatePath } from 'next/cache'
 import { createServerClient } from '@/lib/supabase'
+import { requireAuth } from '@/lib/require-auth'
+import { MS_PER_HOUR } from '@/lib/constants'
 
-export async function logOpeningStock(
-  preparationId: string,
-  quantity: number,
-  kitchenUserId?: string | null,
-): Promise<{ error: string | null }> {
-  if (quantity < 0) return { error: 'La quantitat no pot ser negativa' }
-
+export async function reserveBatchNumber(): Promise<{ batch_number: number | null; error: string | null }> {
+  await requireAuth()
   const supabase = await createServerClient()
-
-  const { error } = await supabase.from('production_logs').insert({
-    preparation_id: preparationId,
-    type: 'opening',
-    quantity,
-    logged_at: new Date().toISOString(),
-    expires_at: null,
-    notes: null,
-    kitchen_user_id: kitchenUserId ?? null,
-  })
-
-  if (error) return { error: error.message }
-
-  revalidatePath('/')
-  return { error: null }
+  const { data, error } = await supabase.rpc('nextval_batch_number')
+  if (error) return { batch_number: null, error: error.message }
+  return { batch_number: data as number, error: null }
 }
 
+export type ProductionResult = { error: string | null; batch_number: number | null }
+
 export async function logProduction(
-  preparationId: string,
+  productionId: string,
   quantity: number,
-  shelfLifeHours: number,
-  lotNumber?: string,
-  kitchenUserId?: string | null,
-): Promise<{ error: string | null }> {
-  if (quantity <= 0) return { error: 'La quantitat ha de ser major que 0' }
+  shelfLifeHours: number | null,
+  batchNumber: number,
+): Promise<ProductionResult> {
+  await requireAuth()
+  if (quantity <= 0) return { error: 'La quantitat ha de ser major que 0', batch_number: null }
 
   const supabase = await createServerClient()
   const now = new Date()
-  const expiresAt = new Date(now.getTime() + shelfLifeHours * 60 * 60 * 1000)
+  const expiresAt = shelfLifeHours
+    ? new Date(now.getTime() + shelfLifeHours * MS_PER_HOUR).toISOString()
+    : null
 
   const { error } = await supabase.from('production_logs').insert({
-    preparation_id: preparationId,
-    type: 'production',
+    production_id: productionId,
     quantity,
     logged_at: now.toISOString(),
-    expires_at: expiresAt.toISOString(),
-    notes: null,
-    batch_number: lotNumber?.trim() || null,
-    kitchen_user_id: kitchenUserId ?? null,
+    expires_at: expiresAt,
+    batch_number: batchNumber,
   })
 
-  if (error) return { error: error.message }
+  if (error) return { error: error.message, batch_number: null }
 
-  revalidatePath('/')
-  return { error: null }
+  revalidatePath('/', 'layout')
+  return { error: null, batch_number: batchNumber }
 }
+

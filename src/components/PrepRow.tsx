@@ -1,107 +1,104 @@
 'use client'
 
 import { useState } from 'react'
-import { OpeningInput } from './OpeningInput'
 import { ProductionButton } from './ProductionButton'
-import { StockActualHoy } from '@/types/database'
-import { truncUnit } from '@/lib/format'
+import { SalePanel } from './SalePanel'
+import { EditPrepModal } from './EditPrepModal'
+import { type StockActualHoy, type ActiveLot } from '@/types/database'
+import { truncUnit, formatExpiry } from '@/lib/format'
 
-function formatExpiry(iso: string): string {
-  const date = new Date(iso)
-  const now = new Date()
-  const time = date.toLocaleTimeString('ca-ES', { hour: '2-digit', minute: '2-digit' })
-  if (date.toDateString() === now.toDateString()) return `cad. ${time}`
-  if (date.toDateString() === new Date(now.getTime() + 86400000).toDateString())
-    return `cad. demà ${time}`
-  return `cad. ${date.toLocaleDateString('ca-ES', { day: 'numeric', month: 'short' })} ${time}`
-}
+type OpenMode = 'production' | 'sale' | null
 
-function Semaforo({ faltaProducir, parQuantity }: { faltaProducir: number; parQuantity: number }) {
-  if (faltaProducir === 0)
-    return <span className="w-4 h-4 rounded-full bg-green-600 shrink-0 inline-block" />
-  if (faltaProducir < parQuantity)
-    return <span className="w-4 h-4 rounded-full bg-yellow-500 shrink-0 inline-block" />
-  return <span className="w-4 h-4 rounded-full bg-red-600 shrink-0 inline-block" />
-}
+export function PrepRow({ item, initialLots, openMode, onSetMode, onStockDelta }: {
+  item: StockActualHoy
+  initialLots: ActiveLot[]
+  openMode: OpenMode
+  onSetMode: (mode: OpenMode) => void
+  onStockDelta: (delta: number) => void
+}): React.JSX.Element {
+  const [editing, setEditing] = useState(false)
 
-export function PrepRow({ item }: { item: StockActualHoy }) {
-  const [prodOpen, setProdOpen] = useState(false)
-  const isDone = item.falta_producir === 0
+  function toggle(mode: 'production' | 'sale'): void {
+    onSetMode(openMode === mode ? null : mode)
+  }
 
   return (
     <>
-      <tr
-        className={`border-b border-[#e5e3de] transition-colors ${
-          isDone ? 'bg-green-50 hover:bg-green-100/60' : 'hover:bg-[#fafaf8]'
-        }`}
-      >
+      {editing && <EditPrepModal item={item} onClose={() => setEditing(false)} />}
+      <tr className="border-b border-[#e5e3de] transition-colors hover:bg-[#fafaf8]">
         <td className="py-5 pr-6 align-middle">
-          <div className="flex items-center gap-3">
-            <Semaforo faltaProducir={item.falta_producir} parQuantity={item.par_quantity} />
+          <div className="flex items-center gap-2">
             <div className="flex flex-col gap-0.5">
               <span className="text-lg font-semibold text-gray-900 leading-tight">{item.name}</span>
-              {item.proxima_caducidad && (
+              {item.next_expiry && (
                 <span className="text-base font-semibold text-red-600 tabular-nums leading-tight">
-                  {formatExpiry(item.proxima_caducidad)}
+                  {formatExpiry(item.next_expiry)}
                 </span>
               )}
             </div>
+            <button
+              onClick={() => setEditing(true)}
+              className="w-9 h-9 flex items-center justify-center rounded-lg text-gray-300 hover:text-gray-500 hover:bg-gray-100 shrink-0 transition-colors"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                <path d="m15 5 4 4" />
+              </svg>
+            </button>
           </div>
         </td>
         <td className="py-5 px-4 align-middle text-right">
           <span className="text-xl font-bold tabular-nums text-gray-800">{item.stock_total}</span>
           <span className="text-sm text-gray-400 ml-1 max-w-[3rem] truncate inline-block align-middle">{truncUnit(item.unit)}</span>
         </td>
-        <td className="py-5 px-4 align-middle text-right whitespace-nowrap">
-          <span className="text-base tabular-nums text-gray-400">{item.par_quantity}</span>
-          <span className="text-sm text-gray-400 ml-1">{truncUnit(item.unit)}</span>
-        </td>
-        <td className="py-5 px-4 align-middle text-right whitespace-nowrap">
-          {item.falta_producir > 0 ? (
-            <span className="inline-flex items-center px-3 py-1 rounded-full bg-red-100 text-red-700 text-base font-semibold tabular-nums">
-              −{item.falta_producir} {truncUnit(item.unit)}
-            </span>
-          ) : (
-            <span className="inline-flex items-center px-3 py-1 rounded-full bg-green-100 text-green-700 text-base font-semibold">
-              ✓
-            </span>
-          )}
-        </td>
-        <td className="py-5 px-4 align-middle">
-          <div className="flex justify-center">
-            <OpeningInput preparationId={item.preparation_id} unit={item.unit} />
-          </div>
-        </td>
-        <td className="py-5 pl-3 align-middle w-[280px]">
-          <div className="flex justify-center">
+        <td className="py-5 pl-3 align-middle w-[320px]">
+          <div className="flex justify-center gap-2">
             <button
-              onClick={() => setProdOpen((v) => !v)}
-              className={`h-14 px-6 rounded-xl border text-base font-semibold transition-colors ${
-                prodOpen
+              onClick={() => toggle('production')}
+              className={`h-14 px-5 rounded-xl border text-base font-semibold transition-colors ${
+                openMode === 'production'
                   ? 'bg-red-600 border-red-600 text-white hover:bg-red-700'
                   : 'border-blue-600 text-blue-600 hover:bg-blue-50'
               }`}
             >
-              {prodOpen ? 'Anul·lar' : '+ Produir'}
+              {openMode === 'production' ? 'Anul\u00b7lar' : '+ Produir'}
+            </button>
+            <button
+              onClick={() => toggle('sale')}
+              className={`h-14 px-5 rounded-xl border text-base font-semibold transition-colors ${
+                openMode === 'sale'
+                  ? 'bg-red-600 border-red-600 text-white hover:bg-red-700'
+                  : 'border-red-600 text-red-600 hover:bg-red-50'
+              }`}
+            >
+              {openMode === 'sale' ? 'Anul\u00b7lar' : '- Sale'}
             </button>
           </div>
         </td>
       </tr>
-      {prodOpen && (
-        <tr className="border-b border-[#e5e3de] last:border-0 bg-blue-50/50">
-          <td colSpan={6} className="px-6 py-4">
-            <div className="flex flex-col gap-3">
-              <span className="text-base text-gray-500">
-                Registrar producció de <strong className="text-gray-900">{item.name}</strong>:
-              </span>
+      {openMode && (
+        <tr className={`border-b border-[#e5e3de] last:border-0 ${openMode === 'sale' ? 'bg-red-50/50' : 'bg-blue-50/50'}`}>
+          <td colSpan={3} className="px-6 py-4">
+            {openMode === 'sale' ? (
+              <SalePanel
+                productionId={item.production_id}
+                unit={item.unit}
+                stock={item.stock_total}
+                initialLots={initialLots}
+                onClose={() => onSetMode(null)}
+                onSuccess={(qty) => onStockDelta(-qty)}
+              />
+            ) : (
               <ProductionButton
-                preparationId={item.preparation_id}
+                productionId={item.production_id}
+                name={item.name}
                 unit={item.unit}
                 shelfLifeHours={item.shelf_life_hours}
                 variant="form"
-                onClose={() => setProdOpen(false)}
+                onClose={() => onSetMode(null)}
+                onSuccess={(qty) => onStockDelta(qty)}
               />
-            </div>
+            )}
           </td>
         </tr>
       )}

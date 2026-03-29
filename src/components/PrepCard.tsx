@@ -1,67 +1,104 @@
 'use client'
 
-import { OpeningInput } from './OpeningInput'
+import { useState } from 'react'
 import { ProductionButton } from './ProductionButton'
-import { StockActualHoy } from '@/types/database'
-import { truncUnit } from '@/lib/format'
+import { SalePanel } from './SalePanel'
+import { EditPrepModal } from './EditPrepModal'
+import { type StockActualHoy, type ActiveLot } from '@/types/database'
+import { truncUnit, formatExpiry } from '@/lib/format'
 
-function formatExpiry(iso: string): string {
-  const date = new Date(iso)
-  const now = new Date()
-  const time = date.toLocaleTimeString('ca-ES', { hour: '2-digit', minute: '2-digit' })
-  if (date.toDateString() === now.toDateString()) return `cad. ${time}`
-  if (date.toDateString() === new Date(now.getTime() + 86400000).toDateString())
-    return `cad. demà ${time}`
-  return `cad. ${date.toLocaleDateString('ca-ES', { day: 'numeric', month: 'short' })} ${time}`
-}
+type OpenMode = 'production' | 'sale' | null
 
-function Semaforo({ faltaProducir, parQuantity }: { faltaProducir: number; parQuantity: number }) {
-  if (faltaProducir === 0)
-    return <span className="w-4 h-4 rounded-full bg-green-600 shrink-0 inline-block" title="OK" />
-  if (faltaProducir < parQuantity)
-    return <span className="w-4 h-4 rounded-full bg-yellow-500 shrink-0 inline-block" title="Parcial" />
-  return <span className="w-4 h-4 rounded-full bg-red-600 shrink-0 inline-block" title="Pendent" />
-}
-
-export function PrepCard({ item }: { item: StockActualHoy }) {
-  const isDone = item.falta_producir === 0
+export function PrepCard({ item, initialLots, openMode, onSetMode, onStockDelta }: {
+  item: StockActualHoy
+  initialLots: ActiveLot[]
+  openMode: OpenMode
+  onSetMode: (mode: OpenMode) => void
+  onStockDelta: (delta: number) => void
+}): React.JSX.Element {
+  const [editing, setEditing] = useState(false)
 
   return (
-    <div className={`p-4 border-b border-[#e5e3de] last:border-0 ${isDone ? 'bg-green-50' : ''}`}>
-      <div className="flex items-start justify-between gap-3 mb-3">
-        <div className="flex items-center gap-3 min-w-0">
-          <Semaforo faltaProducir={item.falta_producir} parQuantity={item.par_quantity} />
-          <div className="min-w-0">
-            <div className="text-base font-semibold text-gray-900 leading-tight">{item.name}</div>
-            {item.proxima_caducidad && (
-              <div className="text-sm font-semibold text-red-600 tabular-nums leading-tight">
-                {formatExpiry(item.proxima_caducidad)}
-              </div>
-            )}
-          </div>
+    <div className="p-4 border-b border-[#e5e3de] last:border-0">
+      {editing && <EditPrepModal item={item} onClose={() => setEditing(false)} />}
+      <div className="mb-3 flex items-start justify-between">
+        <div>
+          <div className="text-base font-semibold text-gray-900 leading-tight">{item.name}</div>
+          {item.next_expiry && (
+            <div className="text-sm font-semibold text-red-600 tabular-nums leading-tight">
+              {formatExpiry(item.next_expiry)}
+            </div>
+          )}
         </div>
-        {item.falta_producir > 0 ? (
-          <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-red-100 text-red-700 text-sm font-semibold tabular-nums shrink-0">
-            −{item.falta_producir} {truncUnit(item.unit)}
-          </span>
-        ) : (
-          <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-green-100 text-green-700 text-sm font-semibold shrink-0">
-            ✓
-          </span>
-        )}
+        <button
+          onClick={() => setEditing(true)}
+          className="w-10 h-10 flex items-center justify-center rounded-xl text-gray-400 hover:bg-gray-100 shrink-0"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+            <path d="m15 5 4 4" />
+          </svg>
+        </button>
       </div>
-      <div className="grid grid-cols-2 text-sm text-gray-500 mb-3">
-        <span>Stock: <strong className="text-gray-800 tabular-nums">{item.stock_total} {truncUnit(item.unit)}</strong></span>
-        <span>Par: <strong className="text-gray-500 tabular-nums">{item.par_quantity} {truncUnit(item.unit)}</strong></span>
+      <div className="text-sm text-gray-500 mb-3">
+        Stock: <strong className="text-gray-800 tabular-nums">{item.stock_total} {truncUnit(item.unit)}</strong>
       </div>
-      <div className="flex flex-col gap-2">
-        <OpeningInput preparationId={item.preparation_id} unit={item.unit} />
-        <ProductionButton
-          preparationId={item.preparation_id}
-          unit={item.unit}
-          shelfLifeHours={item.shelf_life_hours}
-        />
-      </div>
+
+      {openMode === null && (
+        <div className="flex gap-2">
+          <button
+            onClick={() => onSetMode('production')}
+            className="flex-1 h-14 rounded-xl border border-blue-600 text-blue-600 text-base font-semibold hover:bg-blue-50 transition-colors"
+          >
+            + Produir
+          </button>
+          <button
+            onClick={() => onSetMode('sale')}
+            className="flex-1 h-14 rounded-xl border border-red-600 text-red-600 text-base font-semibold hover:bg-red-50 transition-colors"
+          >
+            - Sale
+          </button>
+        </div>
+      )}
+
+      {openMode === 'production' && (
+        <div className="flex flex-col gap-2">
+          <ProductionButton
+            productionId={item.production_id}
+            name={item.name}
+            unit={item.unit}
+            shelfLifeHours={item.shelf_life_hours}
+            variant="form"
+            onClose={() => onSetMode(null)}
+            onSuccess={(qty) => onStockDelta(qty)}
+          />
+          <button
+            onClick={() => onSetMode(null)}
+            className="h-14 rounded-xl bg-gray-100 text-gray-700 text-base font-semibold hover:bg-gray-200"
+          >
+            Anul·lar
+          </button>
+        </div>
+      )}
+
+      {openMode === 'sale' && (
+        <div className="flex flex-col gap-2">
+          <SalePanel
+            productionId={item.production_id}
+            unit={item.unit}
+            stock={item.stock_total}
+            initialLots={initialLots}
+            onClose={() => onSetMode(null)}
+            onSuccess={(qty) => onStockDelta(-qty)}
+          />
+          <button
+            onClick={() => onSetMode(null)}
+            className="h-14 rounded-xl bg-gray-100 text-gray-700 text-base font-semibold hover:bg-gray-200"
+          >
+            Anul·lar
+          </button>
+        </div>
+      )}
     </div>
   )
 }

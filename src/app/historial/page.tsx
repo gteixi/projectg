@@ -1,155 +1,164 @@
+import { requireAuth } from '@/lib/require-auth'
 import { createServerClient } from '@/lib/supabase'
-import { Sidebar } from '@/components/Sidebar'
-import { CookBadge } from '@/components/CookBadge'
-import { CookAvatarGroup } from '@/components/CookAvatarGroup'
-import { HistorialPrepRow, LogDetail } from '@/components/HistorialPrepRow'
-import { Preparation } from '@/types/database'
-
-const RESTAURANT_ID = '11111111-1111-1111-1111-111111111111'
+import { SidebarServer } from '@/components/SidebarServer'
+import { HistorialPrepRow, type LogDetail } from '@/components/HistorialPrepRow'
+import { HistorialSaleRow, type SaleDetail } from '@/components/HistorialSaleRow'
+import { type SaleReason, type ProductionJoin, type ExitLotJoin } from '@/types/database'
+import { formatDateLabel, formatTime } from '@/lib/format'
+import { HISTORIAL_DAYS, HISTORIAL_LOGS_LIMIT, HISTORIAL_EXITS_LIMIT } from '@/lib/constants'
 
 type PrepSummary = {
-  preparation_id: string
+  production_id: string
   name: string
   unit: string
-  par_quantity: number
   total_produced: number
-  reached_par: boolean
   lot_count: number
   entries: LogDetail[]
 }
 
+type SaleSummary = {
+  exit_id: string
+  name: string
+  unit: string
+  quantity: number
+  reason: SaleReason
+  lots: SaleDetail[]
+}
+
+type DayItem =
+  | { kind: 'prep'; sortTime: string; data: PrepSummary }
+  | { kind: 'sale'; sortTime: string; data: SaleSummary }
+
 type DaySummary = {
   date: string
   label: string
-  preps: PrepSummary[]
-  cook_names: string[]
+  items: DayItem[]
 }
 
-function formatDateLabel(dateStr: string): string {
-  const [year, month, day] = dateStr.split('-').map(Number)
-  const date = new Date(year, month - 1, day)
-  return date.toLocaleDateString('ca-ES', { weekday: 'long', day: 'numeric', month: 'long' })
-}
-
-export default async function HistorialPage() {
+export default async function HistorialPage(): Promise<React.JSX.Element> {
+  await requireAuth()
   const supabase = await createServerClient()
 
   const sevenDaysAgo = new Date()
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6)
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - (HISTORIAL_DAYS - 1))
   sevenDaysAgo.setHours(0, 0, 0, 0)
+  const sinceIso = sevenDaysAgo.toISOString()
 
-  const { data: prepsData, error: prepsError } = await supabase
-    .from('preparations')
-    .select('id, name, par_quantity, unit')
-    .eq('restaurant_id', RESTAURANT_ID)
-    .eq('active', true)
+  const [logsResult, exitsResult] = await Promise.all([
+    supabase
+      .from('production_logs')
+      .select('production_id, quantity, logged_at, batch_number, productions!inner(name, unit)')
+      .gte('logged_at', sinceIso)
+      .order('logged_at', { ascending: false })
+      .limit(HISTORIAL_LOGS_LIMIT),
+    supabase
+      .from('stock_exits')
+      .select('id, production_id, quantity, reason, logged_at, stock_exit_lots(batch_number, quantity), productions(name, unit)')
+      .gte('logged_at', sinceIso)
+      .order('logged_at', { ascending: false })
+      .limit(HISTORIAL_EXITS_LIMIT),
+  ])
 
-  if (prepsError) {
-    return <pre className="p-8 text-red-500">{JSON.stringify(prepsError, null, 2)}</pre>
-  }
+  if (logsResult.error) return <pre className="p-8 text-red-500">{logsResult.error.message}</pre>
+  if (exitsResult.error) return <pre className="p-8 text-red-500">{exitsResult.error.message}</pre>
 
-  const preps = (prepsData ?? []) as Pick<Preparation, 'id' | 'name' | 'par_quantity' | 'unit'>[]
-  const prepIds = preps.map((p) => p.id)
-
-  if (prepIds.length === 0) {
+  if ((logsResult.data ?? []).length === 0 && (exitsResult.data ?? []).length === 0) {
     return (
       <div className="flex min-h-screen">
-        <Sidebar />
+        <SidebarServer />
         <main className="flex-1 min-h-screen bg-[#f8f7f4] pb-20 md:ml-[120px] md:pb-0">
           <div className="max-w-5xl mx-auto px-4 py-5 md:px-6 md:py-7">
             <header className="mb-6">
               <h1 className="text-2xl font-bold tracking-tight text-gray-900 md:text-3xl">Historial</h1>
               <p className="text-base text-gray-500 mt-0.5 md:text-lg">Últims 7 dies</p>
             </header>
-            <p className="text-center text-gray-400 text-lg py-16">Sense preparacions</p>
+            <p className="text-center text-gray-400 text-lg py-16">Sense activitat registrada</p>
           </div>
         </main>
       </div>
     )
   }
 
-  const { data: logsData, error: logsError } = await supabase
-    .from('production_logs')
-    .select('preparation_id, quantity, logged_at, batch_number, kitchen_users(name)')
-    .in('preparation_id', prepIds)
-    .eq('type', 'production')
-    .gte('logged_at', sevenDaysAgo.toISOString())
-    .order('logged_at', { ascending: false })
-    .limit(500)
-
-  if (logsError) {
-    return <pre className="p-8 text-red-500">{JSON.stringify(logsError, null, 2)}</pre>
-  }
-
-  const logs = logsData ?? []
-
-  // Group by date → by preparation_id
-  type DayLog = { quantity: number; cook_name: string | null; batch_number: string | null; logged_at: string }
+  type DayLog = { quantity: number; batch_number: number | null; logged_at: string; name: string; unit: string }
   const byDate = new Map<string, Map<string, DayLog[]>>()
 
-  for (const log of logs) {
-    const dateStr = log.logged_at.slice(0, 10)
+  for (const log of logsResult.data ?? []) {
+    const prod = Array.isArray(log.productions) ? log.productions[0] : log.productions
+    const prodTyped = prod as ProductionJoin
+    const dateStr = (log.logged_at as string).slice(0, 10)
     if (!byDate.has(dateStr)) byDate.set(dateStr, new Map())
     const byPrep = byDate.get(dateStr)!
-    if (!byPrep.has(log.preparation_id)) byPrep.set(log.preparation_id, [])
-    const kus = log.kitchen_users as unknown as { name: string } | { name: string }[] | null
-    const cook_name = Array.isArray(kus) ? (kus[0]?.name ?? null) : (kus?.name ?? null)
-    byPrep.get(log.preparation_id)!.push({
-      quantity: log.quantity,
-      cook_name,
-      batch_number: log.batch_number,
-      logged_at: log.logged_at,
+    const pid = log.production_id as string
+    if (!byPrep.has(pid)) byPrep.set(pid, [])
+    byPrep.get(pid)!.push({
+      quantity: log.quantity as number,
+      batch_number: log.batch_number as number | null,
+      logged_at: log.logged_at as string,
+      name: prodTyped.name,
+      unit: prodTyped.unit,
     })
   }
 
-  // Build days array for last 7 days (including days with no production)
+  const exitsByDate = new Map<string, (SaleSummary & { sortTime: string })[]>()
+  for (const exit of exitsResult.data ?? []) {
+    const dateStr = (exit.logged_at as string).slice(0, 10)
+    if (!exitsByDate.has(dateStr)) exitsByDate.set(dateStr, [])
+    const rawProd = exit.productions as ProductionJoin | ProductionJoin[] | null
+    const prod = Array.isArray(rawProd) ? rawProd[0] ?? null : rawProd
+    const exitLots = (exit.stock_exit_lots as ExitLotJoin[]) ?? []
+    exitsByDate.get(dateStr)!.push({
+      exit_id: exit.id as string,
+      name: prod?.name ?? '—',
+      unit: prod?.unit ?? '',
+      quantity: exit.quantity as number,
+      reason: exit.reason as SaleReason,
+      lots: exitLots.map((l) => ({ batch_number: l.batch_number, quantity: l.quantity, time: formatTime(exit.logged_at as string) })),
+      sortTime: exit.logged_at as string,
+    })
+  }
+
   const days: DaySummary[] = []
-  for (let i = 0; i < 7; i++) {
+  for (let i = 0; i < HISTORIAL_DAYS; i++) {
     const d = new Date()
     d.setDate(d.getDate() - i)
     const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
     const byPrep = byDate.get(dateStr)
 
-    const allDayLogs = byPrep ? [...byPrep.values()].flat() : []
-    const cook_names = [...new Set(allDayLogs.map((l) => l.cook_name).filter(Boolean) as string[])]
-
-    const prepsForDay: PrepSummary[] = preps
-      .filter((p) => byPrep?.has(p.id))
-      .map((p) => {
-        const entries = byPrep!.get(p.id)!
+    const prepItems: DayItem[] = []
+    if (byPrep) {
+      for (const [pid, entries] of byPrep) {
         const total = entries.reduce((sum, e) => sum + e.quantity, 0)
         const lot_count = new Set(entries.map((e) => e.batch_number).filter(Boolean)).size
         const logDetails: LogDetail[] = entries.map((e) => ({
           lot_number: e.batch_number,
-          cook_name: e.cook_name,
           quantity: e.quantity,
-          unit: p.unit,
-          time: new Date(e.logged_at).toLocaleTimeString('ca-ES', { hour: '2-digit', minute: '2-digit' }),
+          unit: entries[0].unit,
+          time: formatTime(e.logged_at),
         }))
-        return {
-          preparation_id: p.id,
-          name: p.name,
-          unit: p.unit,
-          par_quantity: p.par_quantity,
-          total_produced: total,
-          reached_par: total >= p.par_quantity,
-          lot_count,
-          entries: logDetails,
-        }
-      })
-      .sort((a, b) => a.name.localeCompare(b.name, 'ca'))
+        prepItems.push({
+          kind: 'prep' as const,
+          sortTime: entries[0].logged_at,
+          data: { production_id: pid, name: entries[0].name, unit: entries[0].unit, total_produced: total, lot_count, entries: logDetails },
+        })
+      }
+    }
 
-    days.push({
-      date: dateStr,
-      label: formatDateLabel(dateStr),
-      preps: prepsForDay,
-      cook_names,
-    })
+    const saleItems: DayItem[] = (exitsByDate.get(dateStr) ?? []).map(({ sortTime, ...sale }) => ({
+      kind: 'sale' as const,
+      sortTime,
+      data: sale,
+    }))
+
+    const items: DayItem[] = [...prepItems, ...saleItems].sort((a, b) =>
+      b.sortTime.localeCompare(a.sortTime)
+    )
+
+    days.push({ date: dateStr, label: formatDateLabel(dateStr), items })
   }
 
   return (
     <div className="flex min-h-screen">
-      <Sidebar />
+      <SidebarServer />
       <main className="flex-1 min-h-screen bg-[#f8f7f4] pb-20 md:ml-[120px] md:pb-0">
         <div className="max-w-5xl mx-auto px-4 py-5 md:px-6 md:py-7">
           <header className="mb-6">
@@ -159,43 +168,38 @@ export default async function HistorialPage() {
 
           <div className="flex flex-col gap-4 md:gap-5">
             {days.map((day, i) => (
-              <div
-                key={day.date}
-                className="bg-white rounded-xl border border-[#e5e3de] overflow-hidden"
-              >
-                <div className="px-4 py-3 border-b border-[#e5e3de] md:px-6 flex items-center justify-between gap-3 flex-wrap">
+              <div key={day.date} className="bg-white rounded-xl border border-[#e5e3de] overflow-hidden">
+                <div className="px-4 py-3 border-b border-[#e5e3de] md:px-6">
                   <h2 className="text-base font-semibold text-gray-800 capitalize">{day.label}</h2>
-                  {day.cook_names.length > 0 && (
-                    <>
-                      <div className="md:hidden">
-                        <CookAvatarGroup names={day.cook_names} />
-                      </div>
-                      <div className="hidden md:flex flex-wrap gap-1.5">
-                        {day.cook_names.map((name) => (
-                          <CookBadge key={name} name={name} />
-                        ))}
-                      </div>
-                    </>
-                  )}
                 </div>
 
-                {day.preps.length === 0 ? (
-                  <p className="px-4 py-4 text-sm text-gray-400 md:px-6">Sense produccions registrades</p>
+                {day.items.length === 0 ? (
+                  <p className="px-4 py-4 text-sm text-gray-400 md:px-6">Sense activitat registrada</p>
                 ) : (
                   <ul className="divide-y divide-[#e5e3de]">
-                    {day.preps.map((prep) => (
-                      <HistorialPrepRow
-                        key={prep.preparation_id}
-                        name={prep.name}
-                        reached_par={prep.reached_par}
-                        total_produced={prep.total_produced}
-                        par_quantity={prep.par_quantity}
-                        unit={prep.unit}
-                        lot_count={prep.lot_count}
-                        entries={prep.entries}
-                        defaultOpen={i < 2}
-                      />
-                    ))}
+                    {day.items.map((item) =>
+                      item.kind === 'prep' ? (
+                        <HistorialPrepRow
+                          key={item.data.production_id}
+                          name={item.data.name}
+                          total_produced={item.data.total_produced}
+                          unit={item.data.unit}
+                          lot_count={item.data.lot_count}
+                          entries={item.data.entries}
+                          defaultOpen={false}
+                        />
+                      ) : (
+                        <HistorialSaleRow
+                          key={item.data.exit_id}
+                          name={item.data.name}
+                          unit={item.data.unit}
+                          quantity={item.data.quantity}
+                          reason={item.data.reason}
+                          lots={item.data.lots}
+                          defaultOpen={false}
+                        />
+                      )
+                    )}
                   </ul>
                 )}
               </div>

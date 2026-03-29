@@ -1,30 +1,25 @@
 import { Sidebar } from '@/components/Sidebar'
-
-function SkeletonRow() {
-  return (
-    <li className="grid items-center gap-x-3 px-4 py-3 md:px-6 animate-pulse" style={{ gridTemplateColumns: 'auto 1fr auto auto' }}>
-      <span className="w-3 h-3 rounded-full bg-gray-200" />
-      <span className="h-4 bg-gray-200 rounded w-32" />
-      <span className="h-5 bg-gray-100 rounded-full w-12" />
-      <span className="h-4 bg-gray-200 rounded w-24" />
-    </li>
-  )
-}
+import { Sk } from '@/components/Skeleton'
 
 function SkeletonDay() {
   return (
-    <div className="bg-white rounded-xl border border-[#e5e3de] overflow-hidden animate-pulse">
+    <div className="bg-white rounded-xl border border-[#e5e3de] overflow-hidden">
       <div className="px-4 py-3 border-b border-[#e5e3de] md:px-6 flex items-center justify-between">
-        <div className="h-5 bg-gray-200 rounded w-40" />
+        <Sk className="h-5 w-40" />
         <div className="flex gap-2">
-          <div className="h-6 bg-gray-100 rounded-full w-16" />
-          <div className="h-6 bg-gray-100 rounded-full w-16" />
+          <Sk className="h-6 w-16 rounded-full" />
+          <Sk className="h-6 w-16 rounded-full" />
         </div>
       </div>
       <ul className="divide-y divide-[#e5e3de]">
-        <SkeletonRow />
-        <SkeletonRow />
-        <SkeletonRow />
+        {[1, 2, 3].map((i) => (
+          <li key={i} className="grid items-center gap-x-3 px-4 py-3 md:px-6 animate-pulse" style={{ gridTemplateColumns: 'auto 1fr auto auto' }}>
+            <span className="w-3 h-3 rounded-full bg-gray-200" />
+            <Sk className="h-4 w-32" />
+            <Sk className="h-5 w-12 rounded-full" />
+            <Sk className="h-4 w-24" />
+          </li>
+        ))}
       </ul>
     </div>
   )

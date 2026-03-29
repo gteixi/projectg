@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import { DM_Sans } from "next/font/google"
+import { ToastProvider } from "@/components/Toast"
 import "./globals.css"
-import { AuthProvider } from "@/components/AuthProvider"
 
 const dmSans = DM_Sans({
   subsets: ["latin"],
@@ -9,7 +9,7 @@ const dmSans = DM_Sans({
 })
 
 export const metadata: Metadata = {
-  title: "PrepList Pro",
+  title: "ProjectG",
   description: "Gestió de producció de cuina professional",
 }
 
@@ -21,7 +21,9 @@ export default function RootLayout({
   return (
     <html lang="ca" className={`${dmSans.className} h-full antialiased`}>
       <body className="min-h-full">
-        <AuthProvider>{children}</AuthProvider>
+        <ToastProvider>
+          {children}
+        </ToastProvider>
       </body>
     </html>
   )

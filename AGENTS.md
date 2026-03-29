@@ -4,9 +4,9 @@
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 <!-- END:nextjs-agent-rules -->
 
-# Project: Prep List (Kitchen Management)
+# ProjectG (Kitchen Management)
 
-A restaurant kitchen prep list app. Next.js 16 App Router + Supabase + React 19 + Tailwind v4 + TypeScript strict.
+A restaurant kitchen management app. Next.js 16 App Router + Supabase + React 19 + Tailwind v4 + TypeScript strict.
 
 ## Stack
 
@@ -54,8 +54,12 @@ Always read the relevant doc in `node_modules/next/dist/docs/` first. The API su
 ## Project structure
 ```
 src/
-  app/          # Next.js App Router pages and layouts
-  components/   # Shared React components
-  lib/          # Supabase clients, helpers, server actions
-  types/        # TypeScript types (database.ts, etc.)
+  app/                    # Next.js App Router pages and layouts
+    page.tsx              # Home: prep list grouped by station (Server Component)
+    urgent/page.tsx       # Lots expiring today/tomorrow (Server Component)
+    trazabilidad/page.tsx # Lot search (Server Component + client wrapper)
+    historial/page.tsx    # 7-day activity history (Server Component)
+  components/             # Shared React components (Toast, Sidebar, PrepCard, SalePanel, etc.)
+  lib/                    # Supabase clients (supabase.ts server, supabase-browser.ts client), Server Actions, helpers
+  types/                  # TypeScript types (database.ts)
 ```

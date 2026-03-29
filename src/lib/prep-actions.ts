@@ -2,45 +2,45 @@
 
 import { revalidatePath } from 'next/cache'
 import { createServerClient } from '@/lib/supabase'
-import { Station } from '@/types/database'
-
-const RESTAURANT_ID = '11111111-1111-1111-1111-111111111111'
+import { requireAuth } from '@/lib/require-auth'
+import { type Station, type ActionResult } from '@/types/database'
 
 interface PrepData {
   name: string
   unit: string
-  par_quantity: number
-  shelf_life_hours: number
+  shelf_life_hours: number | null
   station: Station
 }
 
-export async function createPreparation(data: PrepData): Promise<{ error: string | null }> {
+export async function createPreparation(data: PrepData): Promise<ActionResult> {
+  await requireAuth()
   const supabase = await createServerClient()
-  const { error } = await supabase.from('preparations').insert({
+  const { error } = await supabase.from('productions').insert({
     ...data,
-    restaurant_id: RESTAURANT_ID,
     active: true,
   })
   if (error) return { error: error.message }
-  revalidatePath('/preparacions')
+  revalidatePath('/', 'layout')
   return { error: null }
 }
 
 export async function updatePreparation(
   id: string,
   data: PrepData
-): Promise<{ error: string | null }> {
+): Promise<ActionResult> {
+  await requireAuth()
   const supabase = await createServerClient()
-  const { error } = await supabase.from('preparations').update(data).eq('id', id)
+  const { error } = await supabase.from('productions').update(data).eq('id', id)
   if (error) return { error: error.message }
-  revalidatePath('/preparacions')
+  revalidatePath('/', 'layout')
   return { error: null }
 }
 
-export async function deactivatePreparation(id: string): Promise<{ error: string | null }> {
+export async function deactivatePreparation(id: string): Promise<ActionResult> {
+  await requireAuth()
   const supabase = await createServerClient()
-  const { error } = await supabase.from('preparations').update({ active: false }).eq('id', id)
+  const { error } = await supabase.from('productions').update({ active: false }).eq('id', id)
   if (error) return { error: error.message }
-  revalidatePath('/preparacions')
+  revalidatePath('/', 'layout')
   return { error: null }
 }

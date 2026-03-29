@@ -1,30 +1,35 @@
 'use client'
 
-import { useState } from 'react'
-import { CookBadge } from './CookBadge'
+import { useState, useTransition } from 'react'
+import { formatDateTime, truncUnit } from '@/lib/format'
+import { LOCALE, CRITICAL_EXPIRY_MS, SALE_REASONS } from '@/lib/constants'
+import { type Station, type SaleReason } from '@/types/database'
+import { createSaleExit } from '@/lib/sale-actions'
+import { useToast } from '@/components/Toast'
+
+const STATION_COLORS: Record<Station, string> = {
+  Partida: 'bg-orange-100 text-orange-700',
+  Congelador: 'bg-blue-100 text-blue-700',
+  Camara: 'bg-teal-100 text-teal-700',
+  Timbre: 'bg-pink-100 text-pink-700',
+}
 
 export type LotResult = {
   id: string
-  lot_number: string
+  production_id?: string
+  lot_number: number | null
   preparation_name: string
   unit: string
   quantity: number
   logged_at: string
   expires_at: string | null
-  cook_name: string | null
+  station?: Station
 }
 
-function formatDateTime(iso: string): string {
-  return new Date(iso).toLocaleString('ca-ES', {
-    day: 'numeric', month: 'short', year: 'numeric',
-    hour: '2-digit', minute: '2-digit',
-  })
-}
-
-function ExpiryBadge({ iso }: { iso: string }) {
-  const diff = new Date(iso).getTime() - Date.now()
+function ExpiryBadge({ iso, now }: { iso: string; now: number }): React.JSX.Element {
+  const diff = new Date(iso).getTime() - now
   const expired = diff < 0
-  const critical = !expired && diff < 4 * 3600 * 1000
+  const critical = !expired && diff < CRITICAL_EXPIRY_MS
   const cls = expired
     ? 'bg-red-100 text-red-700'
     : critical
@@ -33,7 +38,7 @@ function ExpiryBadge({ iso }: { iso: string }) {
   const date = new Date(iso)
   const label = expired
     ? `Caducat ${formatDateTime(iso)}`
-    : `Cad. ${date.toLocaleString('ca-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}`
+    : `Cad. ${date.toLocaleString(LOCALE, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}`
   return (
     <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-sm font-semibold ${cls}`}>
       {label}
@@ -41,14 +46,110 @@ function ExpiryBadge({ iso }: { iso: string }) {
   )
 }
 
-export function LoteCard({ lot }: { lot: LotResult }) {
-  const [open, setOpen] = useState(false)
+function LotSaleForm({ lot }: { lot: LotResult }): React.JSX.Element {
+  const { showToast } = useToast()
+  const [quantity, setQuantity] = useState('')
+  const [reason, setReason] = useState<SaleReason>('merma')
+  const [error, setError] = useState<string | null>(null)
+  const [pending, startTransition] = useTransition()
+
+  const unitLabel = truncUnit(lot.unit)
+
+  function handleSubmit(): void {
+    setError(null)
+    const qty = parseFloat(quantity)
+    if (isNaN(qty) || qty <= 0) {
+      setError('Introdueix una quantitat vàlida')
+      return
+    }
+    if (qty > lot.quantity) {
+      setError(`Màx. ${lot.quantity} ${unitLabel}`)
+      return
+    }
+
+    const prodId = lot.production_id
+    const lotNum = lot.lot_number
+    if (!prodId || lotNum === null) return
+
+    startTransition(async () => {
+      const result = await createSaleExit(
+        prodId,
+        qty,
+        reason,
+        [{ batch_number: lotNum, quantity: qty }],
+      )
+      if (result.error) {
+        showToast(`Error: ${result.error}`)
+      }
+    })
+  }
 
   return (
-    <div className="bg-white rounded-xl border border-[#e5e3de] overflow-hidden">
+    <div className="px-5 py-3 flex flex-col gap-2">
+      <div className="flex items-center gap-2">
+        <input
+          type="number"
+          min="0.1"
+          step="0.1"
+          max={lot.quantity}
+          placeholder="quant."
+          value={quantity}
+          onChange={(e) => { setQuantity(e.target.value); setError(null) }}
+          onKeyDown={(e) => { if (e.key === 'Enter') handleSubmit() }}
+          autoFocus
+          disabled={pending}
+          className="w-24 h-14 text-right text-lg border border-red-300 rounded-xl px-3 focus:outline-none focus:ring-2 focus:ring-red-400 disabled:opacity-50 bg-white shrink-0"
+        />
+        <span className="text-base text-gray-400 w-10 shrink-0">{unitLabel}</span>
+        <div className="flex-1 flex gap-1.5">
+          {SALE_REASONS.map((r) => (
+            <button
+              key={r.value}
+              onClick={() => setReason(r.value)}
+              disabled={pending}
+              className={`flex-1 h-14 rounded-xl text-sm font-semibold border transition-colors disabled:opacity-50 ${
+                reason === r.value
+                  ? 'bg-red-600 border-red-600 text-white'
+                  : 'border-[#e5e3de] text-gray-600 hover:bg-red-50'
+              }`}
+            >
+              {r.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      {error && <span className="text-sm text-red-600">{error}</span>}
       <button
-        className={`w-full flex items-center gap-3 px-5 py-4 text-left transition-colors ${open ? 'bg-gray-50' : 'hover:bg-gray-50'}`}
-        onClick={() => setOpen((v) => !v)}
+        onClick={handleSubmit}
+        disabled={pending}
+        className="w-full h-14 rounded-xl border border-red-600 text-red-600 text-base font-semibold hover:bg-red-50 disabled:opacity-50 transition-colors"
+      >
+        {pending ? 'Registrant...' : 'Registrar sortida'}
+      </button>
+    </div>
+  )
+}
+
+export function LoteCard({ lot, variant, showSale = false }: { lot: LotResult; variant?: 'critical' | 'warning' | 'tomorrow'; showSale?: boolean }): React.JSX.Element {
+  const [open, setOpen] = useState(false)
+  const [showForm, setShowForm] = useState(false)
+  const [now] = useState(() => Date.now())
+
+  const cardCls = variant === 'critical'
+    ? 'border-l-4 border-l-red-500 bg-red-50 border-red-200'
+    : variant === 'warning'
+    ? 'border-l-4 border-l-yellow-500 bg-yellow-50 border-yellow-200'
+    : variant === 'tomorrow'
+    ? 'border-l-4 border-l-blue-400 bg-blue-50 border-blue-200'
+    : 'bg-white border-[#e5e3de]'
+
+  const canSale = showSale && lot.production_id && lot.lot_number !== null
+
+  return (
+    <div className={`rounded-xl border overflow-hidden ${cardCls}`}>
+      <button
+        className={`w-full flex items-center gap-3 px-5 py-4 text-left transition-colors ${open ? 'bg-black/5' : 'hover:bg-black/5'}`}
+        onClick={() => { setOpen((v) => { if (v) setShowForm(false); return !v }) }}
       >
         <span className="shrink-0 text-xs font-mono font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-2.5 py-1">
           {lot.lot_number}
@@ -58,7 +159,7 @@ export function LoteCard({ lot }: { lot: LotResult }) {
         </span>
         {lot.expires_at && (
           <span className="shrink-0 hidden sm:block">
-            <ExpiryBadge iso={lot.expires_at} />
+            <ExpiryBadge iso={lot.expires_at} now={now} />
           </span>
         )}
         <svg
@@ -71,6 +172,15 @@ export function LoteCard({ lot }: { lot: LotResult }) {
 
       {open && (
         <div className="divide-y divide-[#f0ede8] border-t border-[#e5e3de]">
+          {lot.station && (
+            <div className="flex items-center justify-between px-5 py-3">
+              <span className="text-sm font-medium text-gray-400 uppercase tracking-wide">Secció</span>
+              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-sm font-semibold ${STATION_COLORS[lot.station]}`}>
+                {lot.station}
+              </span>
+            </div>
+          )}
+
           <div className="flex items-center justify-between px-5 py-3">
             <span className="text-sm font-medium text-gray-400 uppercase tracking-wide">Producció</span>
             <div className="flex flex-col items-end gap-0.5">
@@ -84,18 +194,22 @@ export function LoteCard({ lot }: { lot: LotResult }) {
           <div className="flex items-center justify-between px-5 py-3">
             <span className="text-sm font-medium text-gray-400 uppercase tracking-wide">Caducitat</span>
             {lot.expires_at
-              ? <ExpiryBadge iso={lot.expires_at} />
+              ? <ExpiryBadge iso={lot.expires_at} now={now} />
               : <span className="text-sm text-gray-400">—</span>
             }
           </div>
 
-          <div className="flex items-center justify-between px-5 py-3">
-            <span className="text-sm font-medium text-gray-400 uppercase tracking-wide">Cuiner</span>
-            {lot.cook_name
-              ? <CookBadge name={lot.cook_name} />
-              : <span className="text-sm text-gray-400">—</span>
-            }
-          </div>
+          {canSale && !showForm && (
+            <div className="px-5 py-3">
+              <button
+                onClick={() => setShowForm(true)}
+                className="w-full h-14 rounded-xl border border-red-600 text-red-600 text-base font-semibold hover:bg-red-50 transition-colors"
+              >
+                Sale
+              </button>
+            </div>
+          )}
+          {canSale && showForm && <LotSaleForm lot={lot} />}
         </div>
       )}
     </div>
