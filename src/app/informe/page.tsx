@@ -42,11 +42,19 @@ export default async function InformePage({
   const { dia } = await searchParams
   const today = new Date().toISOString().slice(0, 10)
   const selectedDate = dia && /^\d{4}-\d{2}-\d{2}$/.test(dia) ? dia : today
-  const isToday = selectedDate === today
+  const singleDay = !!dia
+
+  // Single day: date_from = date_to = selected. Default: last 7 days.
+  const dateTo = selectedDate
+  const dateFrom = singleDay ? selectedDate : (() => {
+    const d = new Date(selectedDate + 'T12:00:00')
+    d.setDate(d.getDate() - 6)
+    return d.toISOString().slice(0, 10)
+  })()
 
   const [summaryResult, idleResult] = await Promise.all([
-    supabase.rpc('get_consumption_summary', { ref_date: selectedDate }),
-    supabase.rpc('get_idle_productions', { ref_date: selectedDate }),
+    supabase.rpc('get_consumption_summary', { date_from: dateFrom, date_to: dateTo }),
+    supabase.rpc('get_idle_productions', { date_from: dateFrom, date_to: dateTo }),
   ])
 
   if (summaryResult.error) return <pre className="p-8 text-red-500">{summaryResult.error.message}</pre>
@@ -86,7 +94,7 @@ export default async function InformePage({
             <div>
               <h1 className="text-2xl font-bold tracking-tight text-gray-900 md:text-3xl">Informe</h1>
               <p className="text-base text-gray-500 mt-0.5 md:text-lg">
-                {isToday ? 'Últims 7 dies' : `7 dies fins ${formatDateLabel(selectedDate)}`}
+                {singleDay ? formatDateLabel(selectedDate) : 'Últims 7 dies'}
               </p>
             </div>
             <DatePicker value={selectedDate} />
