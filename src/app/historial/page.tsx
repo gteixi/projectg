@@ -1,6 +1,7 @@
 import { requireAuth } from '@/lib/require-auth'
 import { createServerClient } from '@/lib/supabase'
 import { SidebarServer } from '@/components/SidebarServer'
+import { DatePicker } from '@/components/DatePicker'
 import { HistorialPrepRow, type LogDetail } from '@/components/HistorialPrepRow'
 import { HistorialSaleRow, type SaleDetail } from '@/components/HistorialSaleRow'
 import { type SaleReason, type ProductionJoin, type ExitLotJoin } from '@/types/database'
@@ -35,26 +36,39 @@ type DaySummary = {
   items: DayItem[]
 }
 
-export default async function HistorialPage(): Promise<React.JSX.Element> {
+export default async function HistorialPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ dia?: string }>
+}): Promise<React.JSX.Element> {
   await requireAuth()
   const supabase = await createServerClient()
 
-  const sevenDaysAgo = new Date()
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - (HISTORIAL_DAYS - 1))
-  sevenDaysAgo.setHours(0, 0, 0, 0)
-  const sinceIso = sevenDaysAgo.toISOString()
+  const { dia } = await searchParams
+  const today = new Date().toISOString().slice(0, 10)
+  const selectedDate = dia && /^\d{4}-\d{2}-\d{2}$/.test(dia) ? dia : today
+  const isToday = selectedDate === today
+
+  const endDate = new Date(selectedDate + 'T23:59:59.999')
+  const startDate = new Date(endDate)
+  startDate.setDate(startDate.getDate() - (HISTORIAL_DAYS - 1))
+  startDate.setHours(0, 0, 0, 0)
+  const sinceIso = startDate.toISOString()
+  const untilIso = endDate.toISOString()
 
   const [logsResult, exitsResult] = await Promise.all([
     supabase
       .from('production_logs')
       .select('production_id, quantity, logged_at, batch_number, productions!inner(name, unit)')
       .gte('logged_at', sinceIso)
+      .lte('logged_at', untilIso)
       .order('logged_at', { ascending: false })
       .limit(HISTORIAL_LOGS_LIMIT),
     supabase
       .from('stock_exits')
       .select('id, production_id, quantity, reason, logged_at, stock_exit_lots(batch_number, quantity), productions(name, unit)')
       .gte('logged_at', sinceIso)
+      .lte('logged_at', untilIso)
       .order('logged_at', { ascending: false })
       .limit(HISTORIAL_EXITS_LIMIT),
   ])
@@ -68,9 +82,14 @@ export default async function HistorialPage(): Promise<React.JSX.Element> {
         <SidebarServer />
         <main className="flex-1 min-h-screen bg-[#f8f7f4] pb-20 md:ml-[120px] md:pb-0">
           <div className="max-w-5xl mx-auto px-4 py-5 md:px-6 md:py-7">
-            <header className="mb-6">
-              <h1 className="text-2xl font-bold tracking-tight text-gray-900 md:text-3xl">Historial</h1>
-              <p className="text-base text-gray-500 mt-0.5 md:text-lg">Últims 7 dies</p>
+            <header className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div>
+                <h1 className="text-2xl font-bold tracking-tight text-gray-900 md:text-3xl">Historial</h1>
+                <p className="text-base text-gray-500 mt-0.5 md:text-lg">
+                  {isToday ? 'Últims 7 dies' : `7 dies fins ${selectedDate}`}
+                </p>
+              </div>
+              <DatePicker value={selectedDate} basePath="/historial" />
             </header>
             <p className="text-center text-gray-400 text-lg py-16">Sense activitat registrada</p>
           </div>
@@ -119,7 +138,7 @@ export default async function HistorialPage(): Promise<React.JSX.Element> {
 
   const days: DaySummary[] = []
   for (let i = 0; i < HISTORIAL_DAYS; i++) {
-    const d = new Date()
+    const d = new Date(selectedDate + 'T12:00:00')
     d.setDate(d.getDate() - i)
     const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
     const byPrep = byDate.get(dateStr)
@@ -161,9 +180,14 @@ export default async function HistorialPage(): Promise<React.JSX.Element> {
       <SidebarServer />
       <main className="flex-1 min-h-screen bg-[#f8f7f4] pb-20 md:ml-[120px] md:pb-0">
         <div className="max-w-5xl mx-auto px-4 py-5 md:px-6 md:py-7">
-          <header className="mb-6">
-            <h1 className="text-2xl font-bold tracking-tight text-gray-900 md:text-3xl">Historial</h1>
-            <p className="text-base text-gray-500 mt-0.5 md:text-lg">Últims 7 dies</p>
+          <header className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight text-gray-900 md:text-3xl">Historial</h1>
+              <p className="text-base text-gray-500 mt-0.5 md:text-lg">
+                {isToday ? 'Últims 7 dies' : `7 dies fins ${selectedDate}`}
+              </p>
+            </div>
+            <DatePicker value={selectedDate} basePath="/historial" />
           </header>
 
           <div className="flex flex-col gap-4 md:gap-5">

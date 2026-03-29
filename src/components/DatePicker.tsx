@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation'
 
-export function DatePicker({ value }: { value: string }) {
+export function DatePicker({ value, basePath = '/informe' }: { value: string; basePath?: string }) {
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -15,7 +15,8 @@ export function DatePicker({ value }: { value: string }) {
     } else {
       params.delete('dia')
     }
-    router.push(`/informe?${params.toString()}`)
+    const qs = params.toString()
+    router.push(qs ? `${basePath}?${qs}` : basePath)
   }
 
   return (
