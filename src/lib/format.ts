@@ -29,7 +29,7 @@ export function formatDateLabel(dateStr: string): string {
   const [year, month, day] = dateStr.split('-').map(Number)
   const date = new Date(year, month - 1, day)
   const label = date.toLocaleDateString(LOCALE, { weekday: 'long', day: 'numeric', month: 'long' })
-  return label.charAt(0).toUpperCase() + label.slice(1)
+  return label.replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
 export function formatExpiryShort(isoDate: string): string {
