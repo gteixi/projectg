@@ -1,6 +1,7 @@
 import { requireAuth } from '@/lib/require-auth'
 import { createServerClient } from '@/lib/supabase'
 import { SidebarServer } from '@/components/SidebarServer'
+import { DatePicker } from '@/components/DatePicker'
 import { type Station } from '@/types/database'
 
 const STATION_COLORS: Record<Station, string> = {
@@ -29,13 +30,22 @@ type IdleRow = {
   total_produit: number
 }
 
-export default async function InformePage(): Promise<React.JSX.Element> {
+export default async function InformePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ dia?: string }>
+}): Promise<React.JSX.Element> {
   await requireAuth()
   const supabase = await createServerClient()
 
+  const { dia } = await searchParams
+  const today = new Date().toISOString().slice(0, 10)
+  const selectedDate = dia && /^\d{4}-\d{2}-\d{2}$/.test(dia) ? dia : today
+  const isToday = selectedDate === today
+
   const [summaryResult, idleResult] = await Promise.all([
-    supabase.rpc('get_consumption_summary'),
-    supabase.rpc('get_idle_productions'),
+    supabase.rpc('get_consumption_summary', { ref_date: selectedDate }),
+    supabase.rpc('get_idle_productions', { ref_date: selectedDate }),
   ])
 
   if (summaryResult.error) return <pre className="p-8 text-red-500">{summaryResult.error.message}</pre>
@@ -71,9 +81,14 @@ export default async function InformePage(): Promise<React.JSX.Element> {
       <SidebarServer />
       <main className="flex-1 min-h-screen bg-[#f8f7f4] pb-20 md:ml-[120px] md:pb-0">
         <div className="max-w-5xl mx-auto px-4 py-5 md:px-6 md:py-7">
-          <header className="mb-6">
-            <h1 className="text-2xl font-bold tracking-tight text-gray-900 md:text-3xl">Informe</h1>
-            <p className="text-base text-gray-500 mt-0.5 md:text-lg">Últims 7 dies</p>
+          <header className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight text-gray-900 md:text-3xl">Informe</h1>
+              <p className="text-base text-gray-500 mt-0.5 md:text-lg">
+                {isToday ? 'Últims 7 dies' : `7 dies fins ${selectedDate}`}
+              </p>
+            </div>
+            <DatePicker value={selectedDate} />
           </header>
 
           {/* 1. Métricas resumen */}
