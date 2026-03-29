@@ -2,6 +2,7 @@ import { requireAuth } from '@/lib/require-auth'
 import { createServerClient } from '@/lib/supabase'
 import { SidebarServer } from '@/components/SidebarServer'
 import { DatePicker } from '@/components/DatePicker'
+import { formatDateLabel } from '@/lib/format'
 import { type Station } from '@/types/database'
 
 const STATION_COLORS: Record<Station, string> = {
@@ -85,7 +86,7 @@ export default async function InformePage({
             <div>
               <h1 className="text-2xl font-bold tracking-tight text-gray-900 md:text-3xl">Informe</h1>
               <p className="text-base text-gray-500 mt-0.5 md:text-lg">
-                {isToday ? 'Últims 7 dies' : `7 dies fins ${selectedDate}`}
+                {isToday ? 'Últims 7 dies' : `7 dies fins ${formatDateLabel(selectedDate)}`}
               </p>
             </div>
             <DatePicker value={selectedDate} />
