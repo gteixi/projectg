@@ -212,7 +212,7 @@ export function SalePanel({ productionId, unit, stock, initialLots, onClose, onS
         </div>
       )}
 
-      {inputError && <span className="text-sm text-red-600">{inputError}</span>}
+      {inputError && <p className="text-sm text-red-600 mt-1.5">{inputError}</p>}
       <button
         onClick={handleCalculate}
         disabled={lotsLoading || pending}

@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useTransition, useRef, useEffect } from 'react'
+import { useState, useTransition } from 'react'
+import { createPortal } from 'react-dom'
 import { formatDateTime, truncUnit } from '@/lib/format'
 import { LOCALE, CRITICAL_EXPIRY_MS, SALE_REASONS } from '@/lib/constants'
 import { type Station, type SaleReason } from '@/types/database'
@@ -52,10 +53,12 @@ function LotSaleForm({ lot, onClose }: { lot: LotResult; onClose: () => void }):
   const [reason, setReason] = useState<SaleReason>('merma')
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
+  const [confirming, setConfirming] = useState<{ qty: number; reason: SaleReason } | null>(null)
 
   const unitLabel = truncUnit(lot.unit)
+  const reasonLabel = SALE_REASONS.find((r) => r.value === reason)?.label ?? reason
 
-  function handleSubmit(): void {
+  function handleSale(): void {
     setError(null)
     const qty = parseFloat(quantity)
     if (isNaN(qty) || qty <= 0) {
@@ -66,7 +69,11 @@ function LotSaleForm({ lot, onClose }: { lot: LotResult; onClose: () => void }):
       setError(`Màx. ${lot.quantity} ${unitLabel}`)
       return
     }
+    setConfirming({ qty, reason })
+  }
 
+  function handleSubmit(): void {
+    if (!confirming) return
     const prodId = lot.production_id
     const lotNum = lot.lot_number
     if (!prodId || lotNum === null) return
@@ -74,18 +81,69 @@ function LotSaleForm({ lot, onClose }: { lot: LotResult; onClose: () => void }):
     startTransition(async () => {
       const result = await createSaleExit(
         prodId,
-        qty,
-        reason,
-        [{ batch_number: lotNum, quantity: qty }],
+        confirming.qty,
+        confirming.reason,
+        [{ batch_number: lotNum, quantity: confirming.qty }],
       )
       if (result.error) {
         showToast(`Error: ${result.error}`)
+      } else {
+        onClose()
       }
     })
   }
 
+  const confirmModal = confirming ? createPortal(
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="bg-white rounded-2xl mx-4 w-full max-w-sm flex flex-col overflow-hidden">
+        <div className="flex justify-end px-4 pt-4">
+          <button onClick={() => setConfirming(null)} disabled={pending} className="w-10 h-10 flex items-center justify-center rounded-xl text-gray-400 hover:bg-gray-100 disabled:opacity-50 text-xl">✕</button>
+        </div>
+        <div className="px-8 pb-6 flex flex-col items-center gap-1 text-center">
+          <div className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-2">
+            Confirmar sortida
+          </div>
+          <div className="text-2xl font-bold text-gray-900">{lot.preparation_name}</div>
+          <div className="text-5xl font-bold tabular-nums mt-3 text-red-600">
+            {confirming.qty}
+            <span className="text-2xl font-semibold text-gray-400 ml-2">{unitLabel}</span>
+          </div>
+          <div className="mt-2 text-base font-semibold text-gray-600">{reasonLabel}</div>
+          <div className="mt-3 flex flex-col gap-1.5 w-full">
+            <div className="flex items-center justify-between px-3 py-1.5 bg-red-50 rounded-lg">
+              <span className="text-sm font-mono text-gray-600">Lot #{lot.lot_number}</span>
+              <span className="text-sm font-bold tabular-nums text-gray-900">{confirming.qty} {unitLabel}</span>
+            </div>
+          </div>
+        </div>
+        {error && <p className="text-sm text-red-600 text-center px-8 pb-2">{error}</p>}
+        <div className="p-4 pt-2 flex gap-3">
+          <button
+            onClick={() => setConfirming(null)}
+            disabled={pending}
+            className="flex-1 h-16 rounded-xl bg-red-100 text-red-700 text-base font-semibold hover:bg-red-200 disabled:opacity-50"
+          >
+            Corregir
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={pending}
+            className="flex-1 h-16 rounded-xl text-white text-lg font-semibold disabled:opacity-50 bg-red-600 hover:bg-red-700"
+          >
+            {pending ? '\u2026' : 'Registrar'}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  ) : null
+
   return (
     <div className="px-5 py-3 flex flex-col gap-2">
+      {confirmModal}
       <div className="flex items-center gap-2">
         <input
           type="number"
@@ -95,7 +153,7 @@ function LotSaleForm({ lot, onClose }: { lot: LotResult; onClose: () => void }):
           placeholder="Quantitat"
           value={quantity}
           onChange={(e) => { setQuantity(e.target.value); setError(null) }}
-          onKeyDown={(e) => { if (e.key === 'Enter') handleSubmit() }}
+          onKeyDown={(e) => { if (e.key === 'Enter') handleSale() }}
           autoFocus
           disabled={pending}
           className="w-24 md:w-32 h-14 text-left text-lg border border-red-300 rounded-xl px-3 focus:outline-none focus:ring-2 focus:ring-red-400 disabled:opacity-50 bg-white shrink-0 overflow-hidden text-ellipsis placeholder:text-gray-400"
@@ -125,9 +183,9 @@ function LotSaleForm({ lot, onClose }: { lot: LotResult; onClose: () => void }):
           ✕
         </button>
       </div>
-      {error && <span className="text-sm text-red-600">{error}</span>}
+      {error && <p className="text-sm text-red-600 mt-1.5">{error}</p>}
       <button
-        onClick={handleSubmit}
+        onClick={handleSale}
         disabled={pending}
         className="w-full h-14 rounded-xl border border-red-600 text-red-600 text-base font-semibold hover:bg-red-50 disabled:opacity-50 transition-colors"
       >
@@ -141,18 +199,6 @@ export function LoteCard({ lot, variant, showSale = false }: { lot: LotResult; v
   const [open, setOpen] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const [now] = useState(() => Date.now())
-  const cardRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (!showForm) return
-    function handleClick(e: MouseEvent) {
-      if (cardRef.current && !cardRef.current.contains(e.target as Node)) {
-        setShowForm(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
-  }, [showForm])
 
   const cardCls = variant === 'critical'
     ? 'border-l-4 border-l-red-500 bg-red-50 border-red-200'
@@ -165,7 +211,7 @@ export function LoteCard({ lot, variant, showSale = false }: { lot: LotResult; v
   const canSale = showSale && lot.production_id && lot.lot_number !== null
 
   return (
-    <div ref={cardRef} className={`rounded-xl border overflow-hidden ${cardCls}`}>
+    <div className={`rounded-xl border overflow-hidden ${cardCls}`}>
       <button
         className={`w-full flex items-center gap-3 px-5 py-4 text-left transition-colors ${open ? 'bg-black/5' : 'hover:bg-black/5'}`}
         onClick={() => { setOpen((v) => { if (v) setShowForm(false); return !v }) }}

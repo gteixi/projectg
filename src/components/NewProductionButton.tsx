@@ -109,7 +109,7 @@ export function NewProductionButton() {
   const modal = open ? createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
-      onClick={(e) => { if (e.target === e.currentTarget) handleClose() }}
+      onClick={(e) => e.stopPropagation()}
     >
       <div className="bg-white rounded-2xl w-full max-w-md flex flex-col overflow-hidden">
         <div className="px-6 pt-6 pb-2 flex items-center justify-between">

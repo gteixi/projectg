@@ -27,10 +27,13 @@ export function SaleConfirmModal({
   return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onClick={(e) => { if (e.target === e.currentTarget) onCorrect() }}
+      onClick={(e) => e.stopPropagation()}
     >
       <div className="bg-white rounded-2xl mx-4 w-full max-w-sm flex flex-col overflow-hidden">
-        <div className="px-8 pt-8 pb-6 flex flex-col items-center gap-1 text-center">
+        <div className="flex justify-end px-4 pt-4">
+          <button onClick={onCorrect} disabled={pending} className="w-10 h-10 flex items-center justify-center rounded-xl text-gray-400 hover:bg-gray-100 disabled:opacity-50 text-xl">✕</button>
+        </div>
+        <div className="px-8 pb-6 flex flex-col items-center gap-1 text-center">
           <div className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-2">Confirmar venda</div>
           <div className="text-5xl font-bold text-red-600 tabular-nums mt-3">
             -{quantity}

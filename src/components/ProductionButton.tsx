@@ -72,10 +72,13 @@ export function ProductionButton({ productionId, name, unit, shelfLifeHours, var
   const confirmModal = confirming ? createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onClick={(e) => { if (e.target === e.currentTarget) setConfirming(null) }}
+      onClick={(e) => e.stopPropagation()}
     >
       <div className="bg-white rounded-2xl mx-4 w-full max-w-sm flex flex-col overflow-hidden">
-        <div className="px-8 pt-8 pb-6 flex flex-col items-center gap-1 text-center">
+        <div className="flex justify-end px-4 pt-4">
+          <button onClick={() => setConfirming(null)} disabled={pending} className="w-10 h-10 flex items-center justify-center rounded-xl text-gray-400 hover:bg-gray-100 disabled:opacity-50 text-xl">✕</button>
+        </div>
+        <div className="px-8 pb-6 flex flex-col items-center gap-1 text-center">
           <div className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-2">
             Confirmar producció
           </div>
@@ -99,7 +102,7 @@ export function ProductionButton({ productionId, name, unit, shelfLifeHours, var
             </div>
           </div>
         </div>
-        {error && <div className="text-sm text-red-600 text-center px-8 pb-2">{error}</div>}
+        {error && <p className="text-sm text-red-600 text-center px-8 pb-2">{error}</p>}
         <div className="p-4 pt-2 flex gap-3">
           <button
             onClick={() => setConfirming(null)}
@@ -156,8 +159,8 @@ export function ProductionButton({ productionId, name, unit, shelfLifeHours, var
             ✕
           </button>
         )}
-        {error && <span className="text-sm text-red-600">{error}</span>}
       </div>
+      {error && <p className="text-sm text-red-600 mt-1.5">{error}</p>}
     </>
   )
 
