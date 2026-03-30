@@ -1,12 +1,14 @@
 'use client'
 
 import { createPortal } from 'react-dom'
-import { type FifoBreakdown } from '@/types/database'
+import { type FifoBreakdown, type ActiveLot } from '@/types/database'
 
 interface Props {
   quantity: string
   unitLabel: string
   reasonLabel: string
+  stock: number
+  lots: ActiveLot[]
   breakdown: FifoBreakdown[]
   serverError: string | null
   pending: boolean
@@ -18,6 +20,8 @@ export function SaleConfirmModal({
   quantity,
   unitLabel,
   reasonLabel,
+  stock,
+  lots,
   breakdown,
   serverError,
   pending,
@@ -41,12 +45,19 @@ export function SaleConfirmModal({
           </div>
           <div className="mt-2 text-base font-semibold text-gray-600">{reasonLabel}</div>
           <div className="mt-3 flex flex-col gap-1.5 w-full">
-            {breakdown.map((b) => (
-              <div key={b.batch_number} className="flex items-center justify-between px-3 py-1.5 bg-red-50 rounded-lg">
-                <span className="text-sm font-mono text-gray-600">Lot #{b.batch_number}</span>
-                <span className="text-sm font-bold tabular-nums text-gray-900">{b.quantity} {unitLabel}</span>
-              </div>
-            ))}
+            {breakdown.map((b) => {
+              const lot = lots.find((l) => l.batch_number === b.batch_number)
+              const before = lot?.quantity ?? b.quantity
+              const after = Math.round((before - b.quantity) * 100) / 100
+              return (
+                <div key={b.batch_number} className="flex items-center justify-between px-3 py-1.5 bg-red-50 rounded-lg">
+                  <span className="text-sm font-mono text-gray-600">Lot #{b.batch_number}</span>
+                  <span className="text-sm tabular-nums text-gray-500">
+                    {before} − {b.quantity} = <span className="font-bold text-gray-900">{after} {unitLabel}</span>
+                  </span>
+                </div>
+              )
+            })}
           </div>
         </div>
         {serverError && <div className="text-sm text-red-600 text-center px-8 pb-2">{serverError}</div>}

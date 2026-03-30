@@ -105,6 +105,7 @@ export function PrepRow({ item, initialLots, openMode, onSetMode, onStockDelta }
                 initialLots={initialLots}
                 onClose={() => onSetMode(null)}
                 onSuccess={(qty) => onStockDelta(-qty)}
+                onManualMode={(on) => { if (on) setShowLots(false) }}
               />
             ) : (
               <ProductionButton

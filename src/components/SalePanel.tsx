@@ -17,9 +17,10 @@ interface Props {
   initialLots?: ActiveLot[]
   onClose: () => void
   onSuccess?: (quantity: number) => void
+  onManualMode?: (enabled: boolean) => void
 }
 
-export function SalePanel({ productionId, unit, stock, initialLots, onClose, onSuccess }: Props): React.JSX.Element {
+export function SalePanel({ productionId, unit, stock, initialLots, onClose, onSuccess, onManualMode }: Props): React.JSX.Element {
   const { showToast } = useToast()
   const [step, setStep] = useState<'input' | 'confirm'>('input')
   const [quantity, setQuantity] = useState('')
@@ -46,6 +47,7 @@ export function SalePanel({ productionId, unit, stock, initialLots, onClose, onS
   function handleToggleManual(enabled: boolean) {
     setManualMode(enabled)
     setInputError(null)
+    onManualMode?.(enabled)
     if (enabled) {
       const qty = parseFloat(quantity)
       const fifo = isNaN(qty) || qty <= 0 ? [] : computeFifo(lots, Math.min(qty, lots.reduce((s, l) => s + l.quantity, 0)))
@@ -126,6 +128,8 @@ export function SalePanel({ productionId, unit, stock, initialLots, onClose, onS
       quantity={quantity}
       unitLabel={unitLabel}
       reasonLabel={reasonLabel}
+      stock={stock}
+      lots={lots}
       breakdown={breakdown}
       serverError={serverError}
       pending={pending}

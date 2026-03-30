@@ -114,7 +114,9 @@ function LotSaleForm({ lot, onClose }: { lot: LotResult; onClose: () => void }):
           <div className="mt-3 flex flex-col gap-1.5 w-full">
             <div className="flex items-center justify-between px-3 py-1.5 bg-red-50 rounded-lg">
               <span className="text-sm font-mono text-gray-600">Lot #{lot.lot_number}</span>
-              <span className="text-sm font-bold tabular-nums text-gray-900">{confirming.qty} {unitLabel}</span>
+              <span className="text-sm tabular-nums text-gray-500">
+                {lot.quantity} − {confirming.qty} = <span className="font-bold text-gray-900">{Math.round((lot.quantity - confirming.qty) * 100) / 100} {unitLabel}</span>
+              </span>
             </div>
           </div>
         </div>
