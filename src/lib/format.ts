@@ -1,5 +1,17 @@
 import { LOCALE, UNIT_TRUNCATE_LENGTH, UNIT_TRUNCATE_SLICE, MS_PER_DAY } from './constants'
 
+export type ExpirySemaphore = 'red' | 'yellow' | 'green'
+
+/** Unified expiry classification matching the urgent page logic:
+ *  red = caducado, yellow = caduca hoy, green = caduca demà o més tard */
+export function expirySemaphore(iso: string): ExpirySemaphore {
+  const expiresAt = new Date(iso)
+  const now = new Date()
+  if (expiresAt <= now) return 'red'
+  if (expiresAt.toDateString() === now.toDateString()) return 'yellow'
+  return 'green'
+}
+
 export function truncUnit(unit: string): string {
   return unit.length > UNIT_TRUNCATE_LENGTH ? unit.slice(0, UNIT_TRUNCATE_SLICE) + '.' : unit
 }

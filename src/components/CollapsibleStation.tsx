@@ -30,7 +30,7 @@ export function CollapsibleStation({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className={`w-full px-4 py-4 flex items-center justify-between ${accentBg} transition-colors ${
+        className={`w-full px-5 py-5 flex items-center justify-between ${accentBg} transition-colors ${
           open ? 'border-b border-[#e5e3de]' : ''
         }`}
       >

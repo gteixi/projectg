@@ -2,8 +2,8 @@
 
 import { useState, useTransition } from 'react'
 import { createPortal } from 'react-dom'
-import { formatDateTime, truncUnit } from '@/lib/format'
-import { LOCALE, CRITICAL_EXPIRY_MS, SALE_REASONS } from '@/lib/constants'
+import { formatDateTime, truncUnit, expirySemaphore } from '@/lib/format'
+import { LOCALE, SALE_REASONS } from '@/lib/constants'
 import { type Station, type SaleReason } from '@/types/database'
 import { createSaleExit } from '@/lib/sale-actions'
 import { useToast } from '@/components/Toast'
@@ -27,21 +27,20 @@ export type LotResult = {
   station?: Station
 }
 
-function ExpiryBadge({ iso, now }: { iso: string; now: number }): React.JSX.Element {
-  const diff = new Date(iso).getTime() - now
-  const expired = diff < 0
-  const critical = !expired && diff < CRITICAL_EXPIRY_MS
-  const cls = expired
-    ? 'bg-red-100 text-red-700'
-    : critical
-    ? 'bg-yellow-100 text-yellow-700'
-    : 'bg-green-100 text-green-700'
+const BADGE_CLS = {
+  red: 'bg-red-100 text-red-700',
+  yellow: 'bg-yellow-100 text-yellow-700',
+  green: 'bg-green-100 text-green-700',
+} as const
+
+function ExpiryBadge({ iso }: { iso: string }): React.JSX.Element {
+  const s = expirySemaphore(iso)
   const date = new Date(iso)
-  const label = expired
+  const label = s === 'red'
     ? `Caducat ${formatDateTime(iso)}`
     : `Cad. ${date.toLocaleString(LOCALE, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}`
   return (
-    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-sm font-semibold ${cls}`}>
+    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-sm font-semibold ${BADGE_CLS[s]}`}>
       {label}
     </span>
   )
@@ -198,7 +197,6 @@ function LotSaleForm({ lot, onClose }: { lot: LotResult; onClose: () => void }):
 export function LoteCard({ lot, variant, showSale = false }: { lot: LotResult; variant?: 'critical' | 'warning' | 'tomorrow'; showSale?: boolean }): React.JSX.Element {
   const [open, setOpen] = useState(false)
   const [showForm, setShowForm] = useState(false)
-  const [now] = useState(() => Date.now())
 
   const cardCls = variant === 'critical'
     ? 'border-l-4 border-l-red-500 bg-red-50 border-red-200'
@@ -224,7 +222,7 @@ export function LoteCard({ lot, variant, showSale = false }: { lot: LotResult; v
         </span>
         {lot.expires_at && (
           <span className="shrink-0 hidden sm:block">
-            <ExpiryBadge iso={lot.expires_at} now={now} />
+            <ExpiryBadge iso={lot.expires_at} />
           </span>
         )}
         <svg
@@ -259,7 +257,7 @@ export function LoteCard({ lot, variant, showSale = false }: { lot: LotResult; v
           <div className="flex items-center justify-between px-5 py-3">
             <span className="text-sm font-medium text-gray-400 uppercase tracking-wide">Caducitat</span>
             {lot.expires_at
-              ? <ExpiryBadge iso={lot.expires_at} now={now} />
+              ? <ExpiryBadge iso={lot.expires_at} />
               : <span className="text-sm text-gray-400">—</span>
             }
           </div>

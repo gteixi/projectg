@@ -14,9 +14,12 @@ interface Props {
 }
 
 export function EditPrepModal({ item, onClose }: Props): React.JSX.Element {
+  const initialHours = item.shelf_life_hours
+  const initialIsDays = initialHours !== null && initialHours >= 48 && initialHours % 24 === 0
   const [name, setName] = useState(item.name)
   const [unit, setUnit] = useState<Unit>(item.unit as Unit)
-  const [shelfLifeHours, setShelfLifeHours] = useState(item.shelf_life_hours?.toString() ?? '')
+  const [shelfValue, setShelfValue] = useState(initialHours !== null ? String(initialIsDays ? initialHours / 24 : initialHours) : '')
+  const [shelfUnit, setShelfUnit] = useState<'hours' | 'days'>(initialIsDays ? 'days' : 'hours')
   const [station, setStation] = useState<Station>(item.station)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [serverError, setServerError] = useState<string | null>(null)
@@ -34,7 +37,13 @@ export function EditPrepModal({ item, onClose }: Props): React.JSX.Element {
     setSuggesting(false)
     if (result.suggestion) {
       if (result.suggestion.hours !== null) {
-        setShelfLifeHours(String(result.suggestion.hours))
+        if (result.suggestion.hours >= 48 && result.suggestion.hours % 24 === 0) {
+          setShelfValue(String(result.suggestion.hours / 24))
+          setShelfUnit('days')
+        } else {
+          setShelfValue(String(result.suggestion.hours))
+          setShelfUnit('hours')
+        }
       }
       setSuggestionReason(result.suggestion.reasoning)
     } else if (result.error) {
@@ -50,17 +59,19 @@ export function EditPrepModal({ item, onClose }: Props): React.JSX.Element {
   function handleSave(): void {
     const errs: Record<string, string> = {}
     if (name.trim().length < MIN_PREP_NAME_LENGTH) errs.name = `Mínim ${MIN_PREP_NAME_LENGTH} caràcters`
-    if (shelfLifeHours !== '') {
-      const shelf = parseFloat(shelfLifeHours)
-      if (isNaN(shelf) || shelf <= 0) errs.shelf_life_hours = 'Ha de ser major que 0'
+    if (shelfValue !== '') {
+      const shelf = parseFloat(shelfValue)
+      if (isNaN(shelf) || shelf <= 0) errs.shelf_life_value = 'Ha de ser major que 0'
     }
     if (Object.keys(errs).length > 0) { setErrors(errs); return }
     setServerError(null)
     startTransition(async () => {
+      const raw = shelfValue !== '' ? parseFloat(shelfValue) : null
+      const shelfHours = raw !== null && shelfUnit === 'days' ? raw * 24 : raw
       const result = await updatePreparation(item.production_id, {
         name: name.trim(),
         unit,
-        shelf_life_hours: shelfLifeHours !== '' ? parseFloat(shelfLifeHours) : null,
+        shelf_life_hours: shelfHours,
         station,
       })
       if (result.error) {
@@ -94,7 +105,7 @@ export function EditPrepModal({ item, onClose }: Props): React.JSX.Element {
     `h-14 border rounded-xl px-4 text-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50 w-full ${
       errors[field] ? 'border-red-400' : 'border-[#e5e3de]'
     }`
-  const selectCls = 'h-14 border border-[#e5e3de] rounded-xl px-4 text-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50 w-full'
+  const selectCls = 'h-14 border border-[#e5e3de] rounded-xl pl-4 pr-10 text-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50 w-full appearance-none'
   const labelCls = 'block text-base font-medium text-gray-600 mb-2'
 
   return createPortal(
@@ -132,21 +143,27 @@ export function EditPrepModal({ item, onClose }: Props): React.JSX.Element {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className={labelCls}>Unitat</label>
-              <select value={unit} onChange={(e) => setUnit(e.target.value as Unit)} disabled={pending} className={selectCls}>
-                {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
-              </select>
+              <div className="relative">
+                <select value={unit} onChange={(e) => setUnit(e.target.value as Unit)} disabled={pending} className={selectCls}>
+                  {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
+                </select>
+                <svg className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" viewBox="0 0 20 20"><path d="M6 8l4 4 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </div>
             </div>
             <div>
               <label className={labelCls}>Secció</label>
-              <select value={station} onChange={(e) => setStation(e.target.value as Station)} disabled={pending} className={selectCls}>
-                {STATIONS.map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
+              <div className="relative">
+                <select value={station} onChange={(e) => setStation(e.target.value as Station)} disabled={pending} className={selectCls}>
+                  {STATIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+                </select>
+                <svg className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" viewBox="0 0 20 20"><path d="M6 8l4 4 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </div>
             </div>
           </div>
 
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-base font-medium text-gray-600">Caducitat (hores) <span className="text-gray-400 font-normal">— opcional</span></label>
+              <label className="text-base font-medium text-gray-600">Caducitat <span className="text-gray-400 font-normal">— opcional</span></label>
               <button
                 type="button"
                 onClick={handleSuggest}
@@ -164,15 +181,35 @@ export function EditPrepModal({ item, onClose }: Props): React.JSX.Element {
             {suggestionReason && (
               <p className="text-sm text-gray-500 mb-2 italic">{suggestionReason}</p>
             )}
-            <input
-              type="number" min="1" step="1"
-              value={shelfLifeHours}
-              onChange={(e) => { setShelfLifeHours(e.target.value); clearError('shelf_life_hours') }}
-              disabled={pending}
-              placeholder="Ex: 24"
-              className={inputCls('shelf_life_hours')}
-            />
-            {errors.shelf_life_hours && <p className="text-sm text-red-600 mt-1.5">{errors.shelf_life_hours}</p>}
+            <div className="flex gap-2">
+              <input
+                type="number" min="1" step="1"
+                value={shelfValue}
+                onChange={(e) => { setShelfValue(e.target.value); clearError('shelf_life_value') }}
+                disabled={pending}
+                placeholder={shelfUnit === 'days' ? 'Ex: 3' : 'Ex: 24'}
+                className={inputCls('shelf_life_value') + ' flex-1'}
+              />
+              <div className="flex h-14 rounded-xl border border-[#e5e3de] bg-white overflow-hidden shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setShelfUnit('hours')}
+                  disabled={pending}
+                  className={`px-4 text-base font-semibold transition-colors ${shelfUnit === 'hours' ? 'bg-gray-900 text-white' : 'text-gray-500 hover:bg-gray-100'}`}
+                >
+                  Hores
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShelfUnit('days')}
+                  disabled={pending}
+                  className={`px-4 text-base font-semibold transition-colors ${shelfUnit === 'days' ? 'bg-gray-900 text-white' : 'text-gray-500 hover:bg-gray-100'}`}
+                >
+                  Dies
+                </button>
+              </div>
+            </div>
+            {errors.shelf_life_value && <p className="text-sm text-red-600 mt-1.5">{errors.shelf_life_value}</p>}
           </div>
 
           {serverError && <p className="text-base text-red-600">{serverError}</p>}

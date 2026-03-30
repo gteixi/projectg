@@ -42,7 +42,7 @@ function StationCard({ station, items, lotsByProduction, activeItem, onSetMode, 
       accentText={theme.accentText}
       title={station}
       headerRight={
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-white/70 text-gray-600 text-sm font-semibold px-3 py-1">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-white/70 text-gray-600 text-base font-semibold px-3.5 py-1">
           {items.length} prod.
         </span>
       }
@@ -63,9 +63,9 @@ function StationCard({ station, items, lotsByProduction, activeItem, onSetMode, 
         <table className="w-full">
           <thead>
             <tr className="border-b border-[#e5e3de]">
-              <th className="py-3 pr-6 text-left text-xs font-semibold uppercase tracking-wider text-gray-400">Producció</th>
-              <th className="py-3 px-4 text-right text-xs font-semibold uppercase tracking-wider text-gray-400">Stock</th>
-              <th className="py-3 pl-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-400 w-[280px]">Registrar</th>
+              <th className="py-3 pr-6 text-left text-sm font-semibold uppercase tracking-wider text-gray-400">Producció</th>
+              <th className="py-3 px-4 text-right text-sm font-semibold uppercase tracking-wider text-gray-400">Stock</th>
+              <th className="py-3 pl-3 text-center text-sm font-semibold uppercase tracking-wider text-gray-400 w-[280px]">Registrar</th>
             </tr>
           </thead>
           <tbody>

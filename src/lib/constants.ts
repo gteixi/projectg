@@ -17,7 +17,6 @@ export type Unit = (typeof UNITS)[number]
 
 export const MS_PER_HOUR = 3_600_000
 export const MS_PER_DAY = 86_400_000
-export const CRITICAL_EXPIRY_MS = 4 * MS_PER_HOUR
 export const HISTORIAL_DAYS = 7
 export const HISTORIAL_LOGS_LIMIT = 500
 export const HISTORIAL_EXITS_LIMIT = 200
