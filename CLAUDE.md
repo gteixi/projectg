@@ -27,6 +27,28 @@ Tablet de 10" montada en cocina profesional. La UI debe estar optimizada para:
 - Sin sombras decorativas — solo bordes sutiles
 - Estaciones con color de acento: Partida → naranja, Congelador → azul, Camara → teal, Timbre → rosa
 
+## Entornos
+
+### REGLA CRÍTICA: NUNCA trabajar contra producción
+La base de datos de producción es del cliente y está en uso real. Todo el desarrollo se hace contra Supabase local (Docker). No cambiar `.env.local` para apuntar a producción salvo consulta puntual de solo lectura.
+
+### Desarrollo (por defecto)
+- `.env.local` → Supabase local (`http://127.0.0.1:54321`)
+- `.env.development.local` → backup de las credenciales locales
+- Arrancar: `pnpm db:start`
+- Resetear BD: `pnpm db:reset` (re-aplica migraciones + seed)
+- Parar: `pnpm db:stop`
+- Seed con datos de prueba: `supabase/seed.sql`
+
+### Producción
+- Credenciales en `.env.production.local` (nunca se pushea)
+- En Vercel las env vars están configuradas en el dashboard
+- Proyecto remoto: `pclkioqjytwinidjvmzx.supabase.co`
+
+### Migraciones
+- Crear migraciones en `supabase/migrations/` y probar con `pnpm db:reset` en local
+- Solo aplicar a producción con `npx supabase db push` cuando estén validadas
+
 ## Base de datos (Supabase)
 - restaurant_id de prueba: 11111111-1111-1111-1111-111111111111
 - Vista principal: daily_stock (production_id, name, unit, shelf_life_hours, station, stock_total, next_expiry)

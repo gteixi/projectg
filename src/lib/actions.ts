@@ -25,6 +25,13 @@ export async function logProduction(
   if (quantity <= 0) return { error: 'La quantitat ha de ser major que 0', batch_number: null }
 
   const supabase = await createServerClient()
+
+  const { count } = await supabase
+    .from('production_logs')
+    .select('*', { count: 'exact', head: true })
+    .eq('batch_number', batchNumber)
+  if (count && count > 0) return { error: 'Ja existeix una producció amb aquest lot', batch_number: null }
+
   const now = new Date()
   const expiresAt = shelfLifeHours
     ? new Date(now.getTime() + shelfLifeHours * MS_PER_HOUR).toISOString()

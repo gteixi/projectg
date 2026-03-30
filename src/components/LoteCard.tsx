@@ -92,13 +92,13 @@ function LotSaleForm({ lot }: { lot: LotResult }): React.JSX.Element {
           min="0.1"
           step="0.1"
           max={lot.quantity}
-          placeholder="quant."
+          placeholder="Quantitat"
           value={quantity}
           onChange={(e) => { setQuantity(e.target.value); setError(null) }}
           onKeyDown={(e) => { if (e.key === 'Enter') handleSubmit() }}
           autoFocus
           disabled={pending}
-          className="w-24 h-14 text-right text-lg border border-red-300 rounded-xl px-3 focus:outline-none focus:ring-2 focus:ring-red-400 disabled:opacity-50 bg-white shrink-0"
+          className="w-24 md:w-32 h-14 text-left text-lg border border-red-300 rounded-xl px-3 focus:outline-none focus:ring-2 focus:ring-red-400 disabled:opacity-50 bg-white shrink-0 overflow-hidden text-ellipsis placeholder:text-gray-400"
         />
         <span className="text-base text-gray-400 w-10 shrink-0">{unitLabel}</span>
         <div className="flex-1 flex gap-1.5">
@@ -122,9 +122,9 @@ function LotSaleForm({ lot }: { lot: LotResult }): React.JSX.Element {
       <button
         onClick={handleSubmit}
         disabled={pending}
-        className="w-full h-14 rounded-xl border border-red-600 text-red-600 text-base font-semibold hover:bg-red-50 disabled:opacity-50 transition-colors"
+        className="w-full h-14 rounded-xl bg-red-600 text-white text-base font-semibold hover:bg-red-700 disabled:opacity-50 transition-colors"
       >
-        {pending ? 'Registrant...' : 'Registrar sortida'}
+        Sale
       </button>
     </div>
   )
@@ -203,7 +203,7 @@ export function LoteCard({ lot, variant, showSale = false }: { lot: LotResult; v
             <div className="px-5 py-3">
               <button
                 onClick={() => setShowForm(true)}
-                className="w-full h-14 rounded-xl border border-red-600 text-red-600 text-base font-semibold hover:bg-red-50 transition-colors"
+                className="w-full h-14 rounded-xl bg-red-600 text-white text-base font-semibold hover:bg-red-700 transition-colors"
               >
                 Sale
               </button>

@@ -84,14 +84,19 @@ export function ProductionButton({ productionId, name, unit, shelfLifeHours, var
             {confirming.quantity}
             <span className="text-2xl font-semibold text-gray-400 ml-2">{truncUnit(unit)}</span>
           </div>
-          <div className="mt-4 flex items-center gap-2">
-            <span className="text-sm font-medium text-gray-500">Lote</span>
-            <input
-              type="number"
-              value={editBatch}
-              onChange={(e) => setEditBatch(e.target.value)}
-              className="w-20 h-9 text-center text-sm font-mono font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
-            />
+          <div className="mt-5 flex flex-col items-center gap-1">
+            <span className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Lot</span>
+            <div className="relative group">
+              <input
+                type="number"
+                value={editBatch}
+                onChange={(e) => setEditBatch(e.target.value)}
+                className="w-32 h-12 text-center text-2xl font-mono font-bold text-gray-900 bg-transparent border-b-2 border-gray-300 pl-4 pr-8 focus:border-blue-500 focus:outline-none transition-colors [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+              />
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="absolute right-1 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-400 group-focus-within:text-blue-600 transition-colors pointer-events-none">
+                <path d="M2.695 14.763l-1.262 3.154a.5.5 0 00.65.65l3.155-1.262a4 4 0 001.343-.885L17.5 5.5a2.121 2.121 0 00-3-3L3.58 13.42a4 4 0 00-.885 1.343z" />
+              </svg>
+            </div>
           </div>
         </div>
         {error && <div className="text-sm text-red-600 text-center px-8 pb-2">{error}</div>}
@@ -125,28 +130,28 @@ export function ProductionButton({ productionId, name, unit, shelfLifeHours, var
           type="number"
           min="0.1"
           step="0.1"
-          placeholder="quant."
+          placeholder="Quantitat"
           autoFocus
           disabled={pending}
           onKeyDown={(e) => {
             if (e.key === 'Enter') handleConfirm()
             if (e.key === 'Escape') close()
           }}
-          className="w-24 h-14 text-right text-lg border border-[#e5e3de] rounded-xl px-3 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50 bg-white shrink-0"
+          className="w-24 md:w-32 h-14 text-left text-lg border border-[#e5e3de] rounded-xl px-3 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50 bg-white shrink-0 overflow-hidden text-ellipsis placeholder:text-gray-400"
         />
         <span className="text-base text-gray-400 w-10 shrink-0">{truncUnit(unit)}</span>
         <button
           onClick={handleConfirm}
           disabled={pending}
-          className="flex-1 md:flex-none md:px-5 h-14 rounded-xl text-white text-base font-semibold disabled:opacity-50 bg-blue-600 hover:bg-blue-700"
+          className="flex-1 h-14 rounded-xl border border-blue-600 text-blue-600 text-base font-semibold disabled:opacity-50 hover:bg-blue-50"
         >
-          {pending ? '\u2026' : 'OK'}
+          {pending ? '\u2026' : 'Produir'}
         </button>
         {withClose && (
           <button
             onClick={close}
             disabled={pending}
-            className="flex-1 md:flex-none md:px-5 h-14 rounded-xl bg-red-600 text-white text-base font-semibold hover:bg-red-700 disabled:opacity-50"
+            className="w-14 shrink-0 h-14 rounded-xl bg-red-600 text-white text-base font-semibold hover:bg-red-700 disabled:opacity-50"
           >
             ✕
           </button>

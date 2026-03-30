@@ -142,13 +142,13 @@ export function SalePanel({ productionId, unit, stock, initialLots, onClose, onS
           type="number"
           min="0.1"
           step="0.1"
-          placeholder="quant."
+          placeholder="Quantitat"
           value={quantity}
           onChange={(e) => { setQuantity(e.target.value); setInputError(null) }}
           onKeyDown={(e) => { if (e.key === 'Enter') handleCalculate(); if (e.key === 'Escape') onClose() }}
           autoFocus
           disabled={pending}
-          className="w-24 h-14 text-right text-lg border border-red-300 rounded-xl px-3 focus:outline-none focus:ring-2 focus:ring-red-400 disabled:opacity-50 bg-white shrink-0"
+          className="w-24 md:w-32 h-14 text-left text-lg border border-red-300 rounded-xl px-3 focus:outline-none focus:ring-2 focus:ring-red-400 disabled:opacity-50 bg-white shrink-0 overflow-hidden text-ellipsis placeholder:text-gray-400"
         />
         <span className="text-base text-gray-400 w-10 shrink-0">{unitLabel}</span>
         <div className="flex-1 flex gap-1.5">
@@ -218,7 +218,7 @@ export function SalePanel({ productionId, unit, stock, initialLots, onClose, onS
         disabled={lotsLoading || pending}
         className="w-full h-14 rounded-xl border border-red-600 text-red-600 text-base font-semibold hover:bg-red-50 disabled:opacity-50 transition-colors"
       >
-        Calcular
+        Sale
       </button>
     </div>
   )

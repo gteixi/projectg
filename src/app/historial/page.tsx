@@ -82,7 +82,7 @@ export default async function HistorialPage({
     return (
       <div className="flex min-h-screen">
         <SidebarServer />
-        <main className="flex-1 min-h-screen bg-[#f8f7f4] pb-20 md:ml-[120px] md:pb-0">
+        <main className="flex-1 bg-[#f8f7f4] pb-20 md:ml-[120px] md:pb-0">
           <div className="max-w-5xl mx-auto px-4 py-5 md:px-6 md:py-7">
             <header className="mb-6 flex items-center justify-between">
               <div>
@@ -180,7 +180,7 @@ export default async function HistorialPage({
   return (
     <div className="flex min-h-screen">
       <SidebarServer />
-      <main className="flex-1 min-h-screen bg-[#f8f7f4] pb-20 md:ml-[120px] md:pb-0">
+      <main className="flex-1 bg-[#f8f7f4] pb-20 md:ml-[120px] md:pb-0">
         <div className="max-w-5xl mx-auto px-4 py-5 md:px-6 md:py-7">
           <header className="mb-6 flex items-center justify-between">
             <div>
