@@ -10,7 +10,7 @@ function formatShelfLife(hours: number): string {
   return `${hours}h`
 }
 
-export function ShelfLifeInfo({ hours, onToggle, onEdit }: { hours: number; onToggle?: (open: boolean) => void; onEdit?: () => void }): React.JSX.Element {
+export function ShelfLifeInfo({ hours, onToggle, onEdit, align }: { hours: number; onToggle?: (open: boolean) => void; onEdit?: () => void; align?: 'right' }): React.JSX.Element {
   const [open, setOpen] = useState(false)
 
   function toggle() {
@@ -24,6 +24,8 @@ export function ShelfLifeInfo({ hours, onToggle, onEdit }: { hours: number; onTo
       <button
         onClick={toggle}
         className={`w-8 h-8 flex items-center justify-center rounded-full transition-colors ${
+          align === 'right' ? 'ml-auto' : ''
+        } ${
           open ? 'text-blue-500 bg-blue-50' : 'text-gray-300 hover:text-blue-500 hover:bg-blue-50'
         }`}
       >
