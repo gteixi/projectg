@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useRef, useEffect } from 'react'
 import { formatDateTime, truncUnit } from '@/lib/format'
 import { LOCALE, CRITICAL_EXPIRY_MS, SALE_REASONS } from '@/lib/constants'
 import { type Station, type SaleReason } from '@/types/database'
@@ -46,7 +46,7 @@ function ExpiryBadge({ iso, now }: { iso: string; now: number }): React.JSX.Elem
   )
 }
 
-function LotSaleForm({ lot }: { lot: LotResult }): React.JSX.Element {
+function LotSaleForm({ lot, onClose }: { lot: LotResult; onClose: () => void }): React.JSX.Element {
   const { showToast } = useToast()
   const [quantity, setQuantity] = useState('')
   const [reason, setReason] = useState<SaleReason>('merma')
@@ -117,12 +117,19 @@ function LotSaleForm({ lot }: { lot: LotResult }): React.JSX.Element {
             </button>
           ))}
         </div>
+        <button
+          onClick={onClose}
+          disabled={pending}
+          className="w-14 shrink-0 h-14 rounded-xl border border-[#e5e3de] text-gray-400 text-base font-semibold hover:bg-gray-100 disabled:opacity-50 transition-colors"
+        >
+          ✕
+        </button>
       </div>
       {error && <span className="text-sm text-red-600">{error}</span>}
       <button
         onClick={handleSubmit}
         disabled={pending}
-        className="w-full h-14 rounded-xl bg-red-600 text-white text-base font-semibold hover:bg-red-700 disabled:opacity-50 transition-colors"
+        className="w-full h-14 rounded-xl border border-red-600 text-red-600 text-base font-semibold hover:bg-red-50 disabled:opacity-50 transition-colors"
       >
         Sale
       </button>
@@ -134,6 +141,18 @@ export function LoteCard({ lot, variant, showSale = false }: { lot: LotResult; v
   const [open, setOpen] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const [now] = useState(() => Date.now())
+  const cardRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!showForm) return
+    function handleClick(e: MouseEvent) {
+      if (cardRef.current && !cardRef.current.contains(e.target as Node)) {
+        setShowForm(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [showForm])
 
   const cardCls = variant === 'critical'
     ? 'border-l-4 border-l-red-500 bg-red-50 border-red-200'
@@ -146,7 +165,7 @@ export function LoteCard({ lot, variant, showSale = false }: { lot: LotResult; v
   const canSale = showSale && lot.production_id && lot.lot_number !== null
 
   return (
-    <div className={`rounded-xl border overflow-hidden ${cardCls}`}>
+    <div ref={cardRef} className={`rounded-xl border overflow-hidden ${cardCls}`}>
       <button
         className={`w-full flex items-center gap-3 px-5 py-4 text-left transition-colors ${open ? 'bg-black/5' : 'hover:bg-black/5'}`}
         onClick={() => { setOpen((v) => { if (v) setShowForm(false); return !v }) }}
@@ -203,13 +222,13 @@ export function LoteCard({ lot, variant, showSale = false }: { lot: LotResult; v
             <div className="px-5 py-3">
               <button
                 onClick={() => setShowForm(true)}
-                className="w-full h-14 rounded-xl bg-red-600 text-white text-base font-semibold hover:bg-red-700 transition-colors"
+                className="w-full h-14 rounded-xl border border-red-600 text-red-600 text-base font-semibold hover:bg-red-50 transition-colors"
               >
                 Sale
               </button>
             </div>
           )}
-          {canSale && showForm && <LotSaleForm lot={lot} />}
+          {canSale && showForm && <LotSaleForm lot={lot} onClose={() => setShowForm(false)} />}
         </div>
       )}
     </div>
