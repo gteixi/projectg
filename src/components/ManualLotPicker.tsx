@@ -56,7 +56,7 @@ export function ManualLotPicker({
           <div key={lot.batch_number} className={`flex items-center gap-3 py-2.5 px-3 rounded-lg border border-[#e5e3de]/60 border-l-[3px] ${borderColor[s]} bg-white`}>
             <span className={`w-2 h-2 rounded-full shrink-0 ${dotColor[s]}`} />
             <div className="flex-1 min-w-0">
-              <div className="text-sm text-gray-500">Lot #{lot.batch_number}</div>
+              <div className="flex items-center gap-1"><span className="text-xs text-gray-500">Lote</span><span className="text-xs font-mono font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-2 py-0.5">#{lot.batch_number}</span></div>
               <div className={`text-xs ${textColor[s]}`}>{formatExpiry(lot.expires_at)}</div>
             </div>
             <span className="text-xs text-gray-400 tabular-nums shrink-0">{lot.quantity} {unitLabel}</span>

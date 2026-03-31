@@ -15,19 +15,23 @@ interface Props {
   unit: string
   stock: number
   initialLots?: ActiveLot[]
+  expiredLots?: ActiveLot[]
   onClose: () => void
   onSuccess?: (quantity: number) => void
   onManualMode?: (enabled: boolean) => void
 }
 
-export function SalePanel({ productionId, unit, stock, initialLots, onClose, onSuccess, onManualMode }: Props): React.JSX.Element {
+export function SalePanel({ productionId, unit, stock, initialLots, expiredLots, onClose, onSuccess, onManualMode }: Props): React.JSX.Element {
   const { showToast } = useToast()
   const [step, setStep] = useState<'input' | 'confirm'>('input')
   const [quantity, setQuantity] = useState('')
   const [reason, setReason] = useState<SaleReason>('merma')
-  const [lots, setLots] = useState<ActiveLot[]>(initialLots ?? [])
+  const [activeLots, setActiveLots] = useState<ActiveLot[]>(initialLots ?? [])
   const [lotsLoading, setLotsLoading] = useState(!initialLots)
   const [lotsError, setLotsError] = useState<string | null>(null)
+
+  const lots = reason === 'merma' ? [...activeLots, ...(expiredLots ?? [])] : activeLots
+  const availableStock = reason === 'merma' ? stock + (expiredLots ?? []).reduce((s, l) => s + l.quantity, 0) : stock
   const [breakdown, setBreakdown] = useState<FifoBreakdown[]>([])
   const [inputError, setInputError] = useState<string | null>(null)
   const [serverError, setServerError] = useState<string | null>(null)
@@ -40,7 +44,7 @@ export function SalePanel({ productionId, unit, stock, initialLots, onClose, onS
     getActiveLots(productionId).then(({ lots: l, error }) => {
       setLotsLoading(false)
       if (error) setLotsError(error)
-      else setLots(l)
+      else setActiveLots(l)
     })
   }, [productionId, initialLots])
 
@@ -67,8 +71,8 @@ export function SalePanel({ productionId, unit, stock, initialLots, onClose, onS
       setInputError('Introdueix una quantitat vàlida')
       return
     }
-    if (qty > stock) {
-      setInputError(`Stock insuficient (màx. ${stock} ${truncUnit(unit)})`)
+    if (qty > availableStock) {
+      setInputError(`Stock insuficient (màx. ${availableStock} ${truncUnit(unit)})`)
       return
     }
     const totalAvailable = lots.reduce((s, l) => s + l.quantity, 0)
@@ -128,7 +132,7 @@ export function SalePanel({ productionId, unit, stock, initialLots, onClose, onS
       quantity={quantity}
       unitLabel={unitLabel}
       reasonLabel={reasonLabel}
-      stock={stock}
+      stock={availableStock}
       lots={lots}
       breakdown={breakdown}
       serverError={serverError}
@@ -159,7 +163,7 @@ export function SalePanel({ productionId, unit, stock, initialLots, onClose, onS
           {SALE_REASONS.map((r) => (
             <button
               key={r.value}
-              onClick={() => setReason(r.value)}
+              onClick={() => { setReason(r.value); setInputError(null) }}
               disabled={pending}
               className={`flex-1 h-14 rounded-xl text-sm font-semibold border transition-colors disabled:opacity-50 ${
                 reason === r.value

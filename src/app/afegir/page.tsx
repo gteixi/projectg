@@ -12,11 +12,9 @@ export default async function Home(): Promise<React.JSX.Element> {
   await requireAuth()
   const supabase = await createServerClient()
 
-  const todayStart = new Date()
-  todayStart.setHours(0, 0, 0, 0)
   const nowIso = new Date().toISOString()
 
-  const [stockResult, logsResult, exitsResult] = await Promise.all([
+  const [stockResult, logsResult, expiredLogsResult, exitsResult] = await Promise.all([
     supabase
       .from('daily_stock')
       .select(STOCK_COLUMNS)
@@ -25,9 +23,16 @@ export default async function Home(): Promise<React.JSX.Element> {
       .from('production_logs')
       .select(LOTS_COLUMNS)
       .gt('quantity', 0)
-      .gte('logged_at', todayStart.toISOString())
       .not('expires_at', 'is', null)
       .gt('expires_at', nowIso)
+      .not('batch_number', 'is', null)
+      .order('expires_at', { ascending: true }),
+    supabase
+      .from('production_logs')
+      .select(LOTS_COLUMNS)
+      .gt('quantity', 0)
+      .not('expires_at', 'is', null)
+      .lte('expires_at', nowIso)
       .not('batch_number', 'is', null)
       .order('expires_at', { ascending: true }),
     supabase
@@ -47,28 +52,34 @@ export default async function Home(): Promise<React.JSX.Element> {
 
   const items = (stockResult.data ?? []) as StockActualHoy[]
 
-  const lotsByProduction: Record<string, ActiveLot[]> = {}
-  for (const l of logsResult.data ?? []) {
-    const produced = Number(l.quantity)
-    const exited = exitedByBatch.get(String(l.batch_number)) ?? 0
-    const remaining = produced - exited
-    if (remaining <= 0) continue
-    const pid = l.production_id as string
-    if (!lotsByProduction[pid]) lotsByProduction[pid] = []
-    lotsByProduction[pid].push({
-      log_id: l.id as string,
-      batch_number: l.batch_number as number,
-      quantity: remaining,
-      expires_at: l.expires_at as string,
-    })
+  function buildLotsMap(logs: typeof logsResult.data): Record<string, ActiveLot[]> {
+    const map: Record<string, ActiveLot[]> = {}
+    for (const l of logs ?? []) {
+      const produced = Number(l.quantity)
+      const exited = exitedByBatch.get(String(l.batch_number)) ?? 0
+      const remaining = produced - exited
+      if (remaining <= 0) continue
+      const pid = l.production_id as string
+      if (!map[pid]) map[pid] = []
+      map[pid].push({
+        log_id: l.id as string,
+        batch_number: l.batch_number as number,
+        quantity: remaining,
+        expires_at: l.expires_at as string,
+      })
+    }
+    return map
   }
+
+  const lotsByProduction = buildLotsMap(logsResult.data)
+  const expiredLotsByProduction = buildLotsMap(expiredLogsResult.data)
 
   return (
     <div className="flex min-h-screen">
       <SidebarServer />
       <main className="flex-1 bg-[#f8f7f4] pb-20 md:ml-[120px] md:pb-0">
         <div className="max-w-5xl mx-auto px-4 py-5 md:px-6 md:py-7">
-          <PrepListClient items={items} lotsByProduction={lotsByProduction} action={<NewProductionButton />} />
+          <PrepListClient items={items} lotsByProduction={lotsByProduction} expiredLotsByProduction={expiredLotsByProduction} action={<NewProductionButton />} />
         </div>
       </main>
     </div>

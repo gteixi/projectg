@@ -52,9 +52,9 @@ export function HistorialSaleRow({ name, unit, quantity, reason, lots, defaultOp
           <ul className="divide-y divide-red-100">
             {lots.map((l, i) => (
               <li key={i} className="px-6 py-2.5 md:px-8 flex items-center gap-3">
-                <span className="text-xs text-gray-500 shrink-0">Lote</span>
-                <span className="text-xs font-mono font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-2 py-0.5 shrink-0">
-                  {l.batch_number}
+                <span className="flex items-center gap-1 shrink-0">
+                  <span className="text-xs text-gray-500">Lote</span>
+                  <span className="text-xs font-mono font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-2 py-0.5">#{l.batch_number}</span>
                 </span>
                 <span className="flex-1" />
                 <span className="text-sm tabular-nums text-gray-500 shrink-0">{l.time}</span>

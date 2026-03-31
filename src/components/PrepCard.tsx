@@ -11,9 +11,10 @@ import { LotList } from '@/components/LotList'
 
 type OpenMode = 'production' | 'sale' | null
 
-export function PrepCard({ item, initialLots, openMode, onSetMode, onStockDelta }: {
+export function PrepCard({ item, initialLots, expiredLots, openMode, onSetMode, onStockDelta }: {
   item: StockActualHoy
   initialLots: ActiveLot[]
+  expiredLots: ActiveLot[]
   openMode: OpenMode
   onSetMode: (mode: OpenMode) => void
   onStockDelta: (delta: number) => void
@@ -29,31 +30,48 @@ export function PrepCard({ item, initialLots, openMode, onSetMode, onStockDelta 
         {item.shelf_life_hours != null && <ShelfLifeInfo hours={item.shelf_life_hours} onEdit={() => setEditing(true)} align="right" />}
       </div>
       <div className="mb-4">
-        {item.stock_total > 0 ? (
-          <>
-            <button
-              onClick={() => setShowLots(!showLots)}
-              className="text-base text-gray-500 flex items-center gap-1.5 active:opacity-70"
-            >
-              Stock: <strong className="text-gray-800 tabular-nums underline decoration-dotted decoration-gray-300 underline-offset-4">{item.stock_total} {truncUnit(item.unit)}</strong>
-              <svg
-                width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-                className={`text-gray-400 transition-transform ${showLots ? 'rotate-180' : ''}`}
-              >
-                <path d="m6 9 6 6 6-6" />
-              </svg>
-            </button>
-            {showLots && (
-              <div className="mt-2">
-                <LotList lots={initialLots} unit={item.unit} />
+        {(() => {
+          const expiredStock = expiredLots.reduce((sum, l) => sum + l.quantity, 0)
+          const hasAny = item.stock_total > 0 || expiredStock > 0
+          if (!hasAny) {
+            return (
+              <span className="text-base text-gray-400">
+                Stock: <strong className="tabular-nums">0 {truncUnit(item.unit)}</strong>
+              </span>
+            )
+          }
+          return (
+            <>
+              <div className="min-h-[48px] flex items-center gap-2">
+                <button
+                  onClick={() => setShowLots(!showLots)}
+                  className="text-base text-gray-500 flex items-center gap-1.5 active:opacity-70"
+                >
+                  Stock:
+                  <strong className={`tabular-nums underline decoration-dotted underline-offset-4 ${item.stock_total > 0 ? 'text-gray-800 decoration-gray-300' : 'text-gray-300 decoration-gray-200'}`}>
+                    {item.stock_total} {truncUnit(item.unit)}
+                  </strong>
+                  <svg
+                    width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                    className={`text-gray-400 transition-transform ${showLots ? 'rotate-180' : ''}`}
+                  >
+                    <path d="m6 9 6 6 6-6" />
+                  </svg>
+                </button>
+                {expiredStock > 0 && (
+                  <span className="text-sm font-semibold text-[#dc2626]">
+                    +{expiredStock} caducat
+                  </span>
+                )}
               </div>
-            )}
-          </>
-        ) : (
-          <span className="text-base text-gray-400">
-            Stock: <strong className="tabular-nums">0 {truncUnit(item.unit)}</strong>
-          </span>
-        )}
+              {showLots && (
+                <div className="mt-2">
+                  <LotList lots={[...initialLots, ...expiredLots]} unit={item.unit} />
+                </div>
+              )}
+            </>
+          )
+        })()}
       </div>
 
       {openMode === null && (
@@ -105,6 +123,7 @@ export function PrepCard({ item, initialLots, openMode, onSetMode, onStockDelta 
             unit={item.unit}
             stock={item.stock_total}
             initialLots={initialLots}
+            expiredLots={expiredLots}
             onClose={() => onSetMode(null)}
             onSuccess={(qty) => onStockDelta(-qty)}
             onManualMode={(on) => { if (on) setShowLots(false) }}

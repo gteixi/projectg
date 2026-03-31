@@ -19,6 +19,11 @@ export function truncUnit(unit: string): string {
 export function formatExpiry(iso: string): string {
   const date = new Date(iso)
   const now = new Date()
+  if (date <= now) {
+    const time = date.toLocaleTimeString(LOCALE, { hour: '2-digit', minute: '2-digit' })
+    if (date.toDateString() === now.toDateString()) return `caducat ${time}`
+    return `caducat ${date.toLocaleDateString(LOCALE, { day: 'numeric', month: 'short' })} ${time}`
+  }
   const time = date.toLocaleTimeString(LOCALE, { hour: '2-digit', minute: '2-digit' })
   if (date.toDateString() === now.toDateString()) return `cad. ${time}`
   if (date.toDateString() === new Date(now.getTime() + MS_PER_DAY).toDateString())

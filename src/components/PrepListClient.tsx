@@ -25,10 +25,11 @@ type OpenMode = 'production' | 'sale'
 type ActiveItem = { id: string; mode: OpenMode } | null
 type StockDelta = { productionId: string; delta: number }
 
-function StationCard({ station, items, lotsByProduction, activeItem, onSetMode, onStockDelta }: {
+function StationCard({ station, items, lotsByProduction, expiredLotsByProduction, activeItem, onSetMode, onStockDelta }: {
   station: Station
   items: StockActualHoy[]
   lotsByProduction: Record<string, ActiveLot[]>
+  expiredLotsByProduction: Record<string, ActiveLot[]>
   activeItem: ActiveItem
   onSetMode: (id: string, mode: OpenMode | null) => void
   onStockDelta: (productionId: string, delta: number) => void
@@ -53,6 +54,7 @@ function StationCard({ station, items, lotsByProduction, activeItem, onSetMode, 
             key={item.production_id}
             item={item}
             initialLots={lotsByProduction[item.production_id] ?? []}
+            expiredLots={expiredLotsByProduction[item.production_id] ?? []}
             openMode={activeItem?.id === item.production_id ? activeItem.mode : null}
             onSetMode={(mode) => onSetMode(item.production_id, mode)}
             onStockDelta={(delta) => onStockDelta(item.production_id, delta)}
@@ -74,6 +76,7 @@ function StationCard({ station, items, lotsByProduction, activeItem, onSetMode, 
                 key={item.production_id}
                 item={item}
                 initialLots={lotsByProduction[item.production_id] ?? []}
+                expiredLots={expiredLotsByProduction[item.production_id] ?? []}
                 openMode={activeItem?.id === item.production_id ? activeItem.mode : null}
                 onSetMode={(mode) => onSetMode(item.production_id, mode)}
                 onStockDelta={(delta) => onStockDelta(item.production_id, delta)}
@@ -86,7 +89,7 @@ function StationCard({ station, items, lotsByProduction, activeItem, onSetMode, 
   )
 }
 
-export function PrepListClient({ items, lotsByProduction, action }: { items: StockActualHoy[]; lotsByProduction: Record<string, ActiveLot[]>; action?: ReactNode }): React.JSX.Element {
+export function PrepListClient({ items, lotsByProduction, expiredLotsByProduction, action }: { items: StockActualHoy[]; lotsByProduction: Record<string, ActiveLot[]>; expiredLotsByProduction: Record<string, ActiveLot[]>; action?: ReactNode }): React.JSX.Element {
   const [query, setQuery] = useState('')
   const [activeItem, setActiveItem] = useState<ActiveItem>(null)
 
@@ -146,6 +149,7 @@ export function PrepListClient({ items, lotsByProduction, action }: { items: Sto
             station={station}
             items={grouped[station]}
             lotsByProduction={lotsByProduction}
+            expiredLotsByProduction={expiredLotsByProduction}
             activeItem={activeItem}
             onSetMode={handleSetMode}
             onStockDelta={handleStockDelta}

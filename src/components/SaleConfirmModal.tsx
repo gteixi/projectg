@@ -51,7 +51,7 @@ export function SaleConfirmModal({
               const after = Math.round((before - b.quantity) * 100) / 100
               return (
                 <div key={b.batch_number} className="flex items-center justify-between px-3 py-1.5 bg-red-50 rounded-lg">
-                  <span className="text-sm font-mono text-gray-600">Lot #{b.batch_number}</span>
+                  <span className="flex items-center gap-1"><span className="text-xs text-gray-500">Lote</span><span className="text-xs font-mono font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-2 py-0.5">#{b.batch_number}</span></span>
                   <span className="text-sm tabular-nums text-gray-500">
                     {before} − {b.quantity} = <span className="font-bold text-gray-900">{after} {unitLabel}</span>
                   </span>

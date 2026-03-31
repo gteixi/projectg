@@ -47,7 +47,7 @@ export function HistorialPrepRow({ name, total_produced, unit, lot_count, entrie
             {entries.map((e, i) => (
               <li key={i} className="px-6 py-2.5 md:px-8 flex items-center gap-3">
                 {e.lot_number
-                  ? <><span className="text-xs text-gray-500 shrink-0">Lote</span><span className="text-xs font-mono font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-2 py-0.5 shrink-0">{e.lot_number}</span></>
+                  ? <span className="flex items-center gap-1 shrink-0"><span className="text-xs text-gray-500">Lote</span><span className="text-xs font-mono font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-2 py-0.5">#{e.lot_number}</span></span>
                   : <span className="h-5 w-16 bg-gray-100 rounded-lg shrink-0" />
                 }
                 <span className="flex-1" />
