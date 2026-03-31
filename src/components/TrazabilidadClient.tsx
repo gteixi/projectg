@@ -5,7 +5,7 @@ import { LoteCard, type LotResult } from '@/components/LoteCard'
 import { SearchInput } from '@/components/SearchInput'
 import { TRAZABILIDAD_PAGE_SIZE } from '@/lib/constants'
 
-type SortKey = 'data' | 'lot'
+type SortKey = 'data' | 'caducitat' | 'lot'
 type SortDir = 'asc' | 'desc'
 
 function SortButton({ label, active, dir, onClick }: { label: string; active: boolean; dir: SortDir; onClick: () => void }): React.JSX.Element {
@@ -68,10 +68,14 @@ export function TrazabilidadClient({ allResults }: Props): React.JSX.Element {
       : allResults
 
     return [...base].sort((a, b) => {
-      const cmp =
-        sortKey === 'data'
-          ? a.logged_at.localeCompare(b.logged_at)
-          : (a.lot_number ?? 0) - (b.lot_number ?? 0)
+      let cmp: number
+      if (sortKey === 'data') {
+        cmp = a.logged_at.localeCompare(b.logged_at)
+      } else if (sortKey === 'caducitat') {
+        cmp = (a.expires_at ?? '').localeCompare(b.expires_at ?? '')
+      } else {
+        cmp = (a.lot_number ?? 0) - (b.lot_number ?? 0)
+      }
       return sortDir === 'desc' ? -cmp : cmp
     })
   }, [query, allResults, sortKey, sortDir])
@@ -87,9 +91,10 @@ export function TrazabilidadClient({ allResults }: Props): React.JSX.Element {
         className="mb-3"
       />
 
-      <div className="mb-3 flex items-center gap-2">
-        <span className="text-sm text-gray-400 shrink-0">Ordenar:</span>
-        <SortButton label="Data" active={sortKey === 'data'} dir={sortDir} onClick={() => toggleSort('data')} />
+      <div className="mb-3 flex items-center gap-2 overflow-x-auto">
+        <span className="text-sm text-gray-400 shrink-0 hidden md:inline">Ordenar:</span>
+        <SortButton label="Data producció" active={sortKey === 'data'} dir={sortDir} onClick={() => toggleSort('data')} />
+        <SortButton label="Data caducitat" active={sortKey === 'caducitat'} dir={sortDir} onClick={() => toggleSort('caducitat')} />
         <SortButton label="Lot" active={sortKey === 'lot'} dir={sortDir} onClick={() => toggleSort('lot')} />
       </div>
 
