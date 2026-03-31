@@ -21,7 +21,7 @@ export async function createPreparation(data: PrepData): Promise<ActionResult> {
     kitchen_user_id: session.userId,
   })
   if (error) return { error: error.message }
-  revalidatePath('/', 'layout')
+  revalidatePath('/afegir', 'page')
   return { error: null }
 }
 
@@ -33,7 +33,7 @@ export async function updatePreparation(
   const supabase = await createServerClient()
   const { error } = await supabase.from('productions').update(data).eq('id', id).eq('kitchen_user_id', session.userId)
   if (error) return { error: error.message }
-  revalidatePath('/', 'layout')
+  revalidatePath('/afegir', 'page')
   return { error: null }
 }
 
@@ -42,6 +42,6 @@ export async function deactivatePreparation(id: string): Promise<ActionResult> {
   const supabase = await createServerClient()
   const { error } = await supabase.from('productions').update({ active: false }).eq('id', id).eq('kitchen_user_id', session.userId)
   if (error) return { error: error.message }
-  revalidatePath('/', 'layout')
+  revalidatePath('/afegir', 'page')
   return { error: null }
 }

@@ -66,31 +66,20 @@ export async function createSaleExit(
   const session = await requireAuth()
   const supabase = await createServerClient()
 
-  const { data: exitData, error: exitError } = await supabase
-    .from('stock_exits')
-    .insert({
-      production_id: productionId,
-      quantity,
-      reason,
-      kitchen_user_id: session.userId,
-    })
-    .select('id')
-    .single()
+  const { error } = await supabase.rpc('create_sale_exit', {
+    p_production_id: productionId,
+    p_quantity: quantity,
+    p_reason: reason,
+    p_kitchen_user_id: session.userId,
+    p_lots: lots.map((l) => ({ batch_number: l.batch_number, quantity: l.quantity })),
+  })
 
-  if (exitError) return { error: exitError.message }
+  if (error) return { error: error.message }
 
-  const exitId = (exitData as { id: string }).id
-  const { error: lotsError } = await supabase
-    .from('stock_exit_lots')
-    .insert(lots.map((l) => ({
-      exit_id: exitId,
-      batch_number: l.batch_number,
-      quantity: l.quantity,
-      kitchen_user_id: session.userId,
-    })))
-
-  if (lotsError) return { error: lotsError.message }
-
-  revalidatePath('/', 'layout')
+  revalidatePath('/afegir', 'page')
+  revalidatePath('/urgent', 'page')
+  revalidatePath('/historial', 'page')
+  revalidatePath('/informe', 'page')
+  revalidatePath('/trazabilidad', 'page')
   return { error: null }
 }

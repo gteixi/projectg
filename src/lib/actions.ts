@@ -49,7 +49,10 @@ export async function logProduction(
 
   if (error) return { error: error.message, batch_number: null }
 
-  revalidatePath('/', 'layout')
+  revalidatePath('/afegir', 'page')
+  revalidatePath('/urgent', 'page')
+  revalidatePath('/historial', 'page')
+  revalidatePath('/trazabilidad', 'page')
   return { error: null, batch_number: batchNumber }
 }
 

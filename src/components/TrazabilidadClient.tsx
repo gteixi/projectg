@@ -58,10 +58,11 @@ export function TrazabilidadClient({ allResults }: Props): React.JSX.Element {
 
   const filtered = useMemo(() => {
     const q = normalize(query.trim())
+    const isNumeric = /^\d+$/.test(q)
     const base = q
       ? allResults.filter(
           (r) =>
-            r.lot_number?.toString().includes(q) ||
+            (isNumeric ? r.lot_number?.toString() === q : false) ||
             normalize(r.preparation_name).includes(q)
         )
       : allResults

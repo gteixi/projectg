@@ -20,6 +20,7 @@ export interface Production {
   shelf_life_hours: number | null
   station: Station
   active: boolean
+  kitchen_user_id: string
   created_at: string
 }
 
@@ -30,6 +31,7 @@ export interface ProductionLog {
   expires_at: string | null
   logged_at: string
   batch_number: number | null
+  kitchen_user_id: string
 }
 
 export interface StockActualHoy {
@@ -38,6 +40,7 @@ export interface StockActualHoy {
   unit: string
   shelf_life_hours: number | null
   station: Station
+  kitchen_user_id: string
   stock_total: number
   next_expiry: string | null
 }
@@ -48,12 +51,14 @@ export interface StockExit {
   quantity: number
   reason: SaleReason
   logged_at: string
+  kitchen_user_id: string
 }
 
 export interface StockExitLot {
   exit_id: string
   batch_number: number
   quantity: number
+  kitchen_user_id: string
 }
 
 export type ActionResult = { error: string | null }
