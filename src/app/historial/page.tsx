@@ -2,39 +2,13 @@ import { requireAuth } from '@/lib/require-auth'
 import { createServerClient } from '@/lib/supabase'
 import { SidebarServer } from '@/components/SidebarServer'
 import { DatePicker } from '@/components/DatePicker'
-import { HistorialPrepRow, type LogDetail } from '@/components/HistorialPrepRow'
-import { HistorialSaleRow, type SaleDetail } from '@/components/HistorialSaleRow'
+import { HistorialClient, type DaySummary } from '@/components/HistorialClient'
+import { type LogDetail } from '@/components/HistorialPrepRow'
 import { type SaleReason, type ProductionJoin, type ExitLotJoin } from '@/types/database'
 import { formatDateLabel, formatTime } from '@/lib/format'
 import { HISTORIAL_DAYS, HISTORIAL_LOGS_LIMIT, HISTORIAL_EXITS_LIMIT } from '@/lib/constants'
 
-type PrepSummary = {
-  production_id: string
-  name: string
-  unit: string
-  total_produced: number
-  lot_count: number
-  entries: LogDetail[]
-}
-
-type SaleSummary = {
-  exit_id: string
-  name: string
-  unit: string
-  quantity: number
-  reason: SaleReason
-  lots: SaleDetail[]
-}
-
-type DayItem =
-  | { kind: 'prep'; sortTime: string; data: PrepSummary }
-  | { kind: 'sale'; sortTime: string; data: SaleSummary }
-
-type DaySummary = {
-  date: string
-  label: string
-  items: DayItem[]
-}
+type DayItem = DaySummary['items'][number]
 
 export default async function HistorialPage({
   searchParams,
@@ -47,7 +21,6 @@ export default async function HistorialPage({
   const { dia } = await searchParams
   const today = new Date().toISOString().slice(0, 10)
   const selectedDate = dia && /^\d{4}-\d{2}-\d{2}$/.test(dia) ? dia : today
-  const isToday = selectedDate === today
 
   const singleDay = !!dia
   const numDays = singleDay ? 1 : HISTORIAL_DAYS
@@ -80,28 +53,6 @@ export default async function HistorialPage({
   if (logsResult.error) return <pre className="p-8 text-red-500">{logsResult.error.message}</pre>
   if (exitsResult.error) return <pre className="p-8 text-red-500">{exitsResult.error.message}</pre>
 
-  if ((logsResult.data ?? []).length === 0 && (exitsResult.data ?? []).length === 0) {
-    return (
-      <div className="flex min-h-screen">
-        <SidebarServer />
-        <main className="flex-1 bg-[#f8f7f4] pb-20 md:ml-[120px] md:pb-0">
-          <div className="max-w-5xl mx-auto px-4 py-5 md:px-6 md:py-7">
-            <header className="mb-6 flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl font-bold tracking-tight text-gray-900 md:text-3xl">Historial</h1>
-                <p className="text-base text-gray-500 mt-0.5 md:text-lg">
-                  {singleDay ? formatDateLabel(selectedDate) : 'Últims 7 dies'}
-                </p>
-              </div>
-              <DatePicker value={selectedDate} basePath="/historial" />
-            </header>
-            <p className="text-center text-gray-400 text-lg py-16">Sense activitat registrada</p>
-          </div>
-        </main>
-      </div>
-    )
-  }
-
   type DayLog = { quantity: number; batch_number: number | null; logged_at: string; name: string; unit: string }
   const byDate = new Map<string, Map<string, DayLog[]>>()
 
@@ -122,7 +73,7 @@ export default async function HistorialPage({
     })
   }
 
-  const exitsByDate = new Map<string, (SaleSummary & { sortTime: string })[]>()
+  const exitsByDate = new Map<string, { sortTime: string; exit_id: string; name: string; unit: string; quantity: number; reason: SaleReason; lots: { batch_number: number; quantity: number; time: string }[] }[]>()
   for (const exit of exitsResult.data ?? []) {
     const dateStr = (exit.logged_at as string).slice(0, 10)
     if (!exitsByDate.has(dateStr)) exitsByDate.set(dateStr, [])
@@ -194,45 +145,7 @@ export default async function HistorialPage({
             <DatePicker value={selectedDate} basePath="/historial" />
           </header>
 
-          <div className="flex flex-col gap-4 md:gap-5">
-            {days.map((day, i) => (
-              <div key={day.date} className="bg-white rounded-xl border border-[#e5e3de] overflow-hidden">
-                <div className="px-4 py-3 border-b border-[#e5e3de] md:px-6">
-                  <h2 className="text-base font-semibold text-gray-800 capitalize">{day.label}</h2>
-                </div>
-
-                {day.items.length === 0 ? (
-                  <p className="px-4 py-4 text-sm text-gray-400 md:px-6">Sense activitat registrada</p>
-                ) : (
-                  <ul className="divide-y divide-[#e5e3de]">
-                    {day.items.map((item) =>
-                      item.kind === 'prep' ? (
-                        <HistorialPrepRow
-                          key={item.data.production_id}
-                          name={item.data.name}
-                          total_produced={item.data.total_produced}
-                          unit={item.data.unit}
-                          lot_count={item.data.lot_count}
-                          entries={item.data.entries}
-                          defaultOpen={false}
-                        />
-                      ) : (
-                        <HistorialSaleRow
-                          key={item.data.exit_id}
-                          name={item.data.name}
-                          unit={item.data.unit}
-                          quantity={item.data.quantity}
-                          reason={item.data.reason}
-                          lots={item.data.lots}
-                          defaultOpen={false}
-                        />
-                      )
-                    )}
-                  </ul>
-                )}
-              </div>
-            ))}
-          </div>
+          <HistorialClient days={days} />
         </div>
       </main>
     </div>
