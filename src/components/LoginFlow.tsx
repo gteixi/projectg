@@ -12,6 +12,7 @@ export function LoginFlow({ users }: { users: User[] }): React.JSX.Element {
   const [selected, setSelected] = useState<User | null>(
     users.length === 1 ? users[0] : null,
   )
+  const [pinPending, setPinPending] = useState(false)
 
   if (!selected) {
     return (
@@ -39,8 +40,8 @@ export function LoginFlow({ users }: { users: User[] }): React.JSX.Element {
         Hola, {selected.name}
       </h1>
       <p className="text-base text-gray-500 mb-8">Introdueix el PIN</p>
-      <PinPad />
-      {users.length > 1 && (
+      <PinPad onPendingChange={setPinPending} />
+      {users.length > 1 && !pinPending && (
         <button
           onClick={() => setSelected(null)}
           className="mt-6 text-base text-gray-400 hover:text-gray-600 transition-colors"

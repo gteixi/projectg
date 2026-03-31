@@ -6,7 +6,7 @@ import { loginWithPin } from '@/lib/auth'
 
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'del'] as const
 
-export function PinPad(): React.JSX.Element {
+export function PinPad({ onPendingChange }: { onPendingChange?: (pending: boolean) => void }): React.JSX.Element {
   const [pin, setPin] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
@@ -22,11 +22,13 @@ export function PinPad(): React.JSX.Element {
     const next = pin + key
     setPin(next)
     if (next.length === 4) {
+      onPendingChange?.(true)
       startTransition(async () => {
         const result = await loginWithPin(next)
         if (result.error) {
           setError(result.error)
           setPin('')
+          onPendingChange?.(false)
         } else {
           router.push('/urgent')
           router.refresh()
