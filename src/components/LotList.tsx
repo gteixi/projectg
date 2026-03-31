@@ -31,16 +31,14 @@ export function LotList({ lots, unit }: { lots: ActiveLot[]; unit: string }): Re
       {lots.map((lot) => {
         const s = expirySemaphore(lot.expires_at)
         return (
-          <li key={lot.log_id} className={`flex items-center justify-between text-sm py-2 px-3 rounded-lg border border-[#e5e3de]/60 border-l-[3px] ${borderColor[s]} bg-white`}>
+          <li key={lot.log_id} className={`flex flex-wrap items-center justify-between text-sm py-2 px-3 rounded-lg border border-[#e5e3de]/60 border-l-[3px] ${borderColor[s]} bg-white gap-y-0.5`}>
             <span className="flex items-center gap-2">
               <span className={`w-2 h-2 rounded-full shrink-0 ${dotColor[s]}`} />
               <span className="text-xs text-gray-500">Lote</span>
               <span className="text-xs font-mono font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-2 py-0.5">#{lot.batch_number}</span>
             </span>
-            <span className="flex items-baseline gap-4">
-              <span className={`${textColor[s]}`}>{formatExpiry(lot.expires_at)}</span>
-              <span className="font-semibold text-gray-800 tabular-nums min-w-[4rem] text-right">{lot.quantity} {truncUnit(unit)}</span>
-            </span>
+            <span className="font-semibold text-gray-800 tabular-nums text-right">{lot.quantity} {truncUnit(unit)}</span>
+            <span className={`w-full text-xs text-right ${textColor[s]}`}>{formatExpiry(lot.expires_at)}</span>
           </li>
         )
       })}
