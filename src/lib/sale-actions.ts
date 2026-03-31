@@ -8,7 +8,7 @@ import { type SaleReason, type ActiveLot, type FifoBreakdown, type ActionResult 
 export async function getActiveLots(
   productionId: string
 ): Promise<{ lots: ActiveLot[]; error: string | null }> {
-  await requireAuth()
+  const session = await requireAuth()
   const supabase = await createServerClient()
 
   const todayStart = new Date()
@@ -19,6 +19,7 @@ export async function getActiveLots(
       .from('production_logs')
       .select('id, batch_number, quantity, expires_at')
       .eq('production_id', productionId)
+      .eq('kitchen_user_id', session.userId)
       .gt('quantity', 0)
       .gte('logged_at', todayStart.toISOString())
       .not('expires_at', 'is', null)
@@ -27,7 +28,8 @@ export async function getActiveLots(
       .order('expires_at', { ascending: true }),
     supabase
       .from('stock_exit_lots')
-      .select('batch_number, quantity'),
+      .select('batch_number, quantity')
+      .eq('kitchen_user_id', session.userId),
   ])
 
   if (logsResult.error) return { lots: [], error: logsResult.error.message }
@@ -61,7 +63,7 @@ export async function createSaleExit(
   reason: SaleReason,
   lots: FifoBreakdown[],
 ): Promise<ActionResult> {
-  await requireAuth()
+  const session = await requireAuth()
   const supabase = await createServerClient()
 
   const { data: exitData, error: exitError } = await supabase
@@ -70,18 +72,21 @@ export async function createSaleExit(
       production_id: productionId,
       quantity,
       reason,
+      kitchen_user_id: session.userId,
     })
     .select('id')
     .single()
 
   if (exitError) return { error: exitError.message }
 
+  const exitId = (exitData as { id: string }).id
   const { error: lotsError } = await supabase
     .from('stock_exit_lots')
     .insert(lots.map((l) => ({
-      exit_id: (exitData as { id: string }).id,
+      exit_id: exitId,
       batch_number: l.batch_number,
       quantity: l.quantity,
+      kitchen_user_id: session.userId,
     })))
 
   if (lotsError) return { error: lotsError.message }

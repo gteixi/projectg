@@ -120,6 +120,7 @@ export function PrepCard({ item, initialLots, expiredLots, openMode, onSetMode, 
         <div className="flex flex-col gap-2">
           <SalePanel
             productionId={item.production_id}
+            name={item.name}
             unit={item.unit}
             stock={item.stock_total}
             initialLots={initialLots}

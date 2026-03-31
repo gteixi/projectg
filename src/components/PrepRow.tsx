@@ -117,6 +117,7 @@ export function PrepRow({ item, initialLots, expiredLots, openMode, onSetMode, o
             {openMode === 'sale' ? (
               <SalePanel
                 productionId={item.production_id}
+                name={item.name}
                 unit={item.unit}
                 stock={item.stock_total}
                 initialLots={initialLots}

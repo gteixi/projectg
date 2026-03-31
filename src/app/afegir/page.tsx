@@ -9,7 +9,7 @@ const STOCK_COLUMNS = 'production_id, name, unit, shelf_life_hours, station, sto
 const LOTS_COLUMNS = 'id, production_id, batch_number, quantity, expires_at' as const
 
 export default async function Home(): Promise<React.JSX.Element> {
-  await requireAuth()
+  const session = await requireAuth()
   const supabase = await createServerClient()
 
   const nowIso = new Date().toISOString()
@@ -18,10 +18,12 @@ export default async function Home(): Promise<React.JSX.Element> {
     supabase
       .from('daily_stock')
       .select(STOCK_COLUMNS)
+      .eq('kitchen_user_id', session.userId)
       .order('name'),
     supabase
       .from('production_logs')
       .select(LOTS_COLUMNS)
+      .eq('kitchen_user_id', session.userId)
       .gt('quantity', 0)
       .not('expires_at', 'is', null)
       .gt('expires_at', nowIso)
@@ -30,6 +32,7 @@ export default async function Home(): Promise<React.JSX.Element> {
     supabase
       .from('production_logs')
       .select(LOTS_COLUMNS)
+      .eq('kitchen_user_id', session.userId)
       .gt('quantity', 0)
       .not('expires_at', 'is', null)
       .lte('expires_at', nowIso)
@@ -37,7 +40,8 @@ export default async function Home(): Promise<React.JSX.Element> {
       .order('expires_at', { ascending: true }),
     supabase
       .from('stock_exit_lots')
-      .select('batch_number, quantity'),
+      .select('batch_number, quantity')
+      .eq('kitchen_user_id', session.userId),
   ])
 
   if (stockResult.error) {

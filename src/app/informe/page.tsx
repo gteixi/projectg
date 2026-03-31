@@ -2,6 +2,7 @@ import { requireAuth } from '@/lib/require-auth'
 import { createServerClient } from '@/lib/supabase'
 import { SidebarServer } from '@/components/SidebarServer'
 import { DatePicker } from '@/components/DatePicker'
+import { LogoutButton } from '@/components/LogoutButton'
 import { formatDateLabel } from '@/lib/format'
 import { type Station } from '@/types/database'
 
@@ -36,7 +37,7 @@ export default async function InformePage({
 }: {
   searchParams: Promise<{ dia?: string }>
 }): Promise<React.JSX.Element> {
-  await requireAuth()
+  const session = await requireAuth()
   const supabase = await createServerClient()
 
   const { dia } = await searchParams
@@ -53,8 +54,8 @@ export default async function InformePage({
   })()
 
   const [summaryResult, idleResult] = await Promise.all([
-    supabase.rpc('get_consumption_summary', { date_from: dateFrom, date_to: dateTo }),
-    supabase.rpc('get_idle_productions', { date_from: dateFrom, date_to: dateTo }),
+    supabase.rpc('get_consumption_summary', { date_from: dateFrom, date_to: dateTo, p_user_id: session.userId }),
+    supabase.rpc('get_idle_productions', { date_from: dateFrom, date_to: dateTo, p_user_id: session.userId }),
   ])
 
   if (summaryResult.error) return <pre className="p-8 text-red-500">{summaryResult.error.message}</pre>
@@ -252,6 +253,8 @@ export default async function InformePage({
               </ul>
             </div>
           )}
+
+          <LogoutButton userName={session.name} />
         </div>
       </main>
     </div>

@@ -13,11 +13,12 @@ interface PrepData {
 }
 
 export async function createPreparation(data: PrepData): Promise<ActionResult> {
-  await requireAuth()
+  const session = await requireAuth()
   const supabase = await createServerClient()
   const { error } = await supabase.from('productions').insert({
     ...data,
     active: true,
+    kitchen_user_id: session.userId,
   })
   if (error) return { error: error.message }
   revalidatePath('/', 'layout')
@@ -28,18 +29,18 @@ export async function updatePreparation(
   id: string,
   data: PrepData
 ): Promise<ActionResult> {
-  await requireAuth()
+  const session = await requireAuth()
   const supabase = await createServerClient()
-  const { error } = await supabase.from('productions').update(data).eq('id', id)
+  const { error } = await supabase.from('productions').update(data).eq('id', id).eq('kitchen_user_id', session.userId)
   if (error) return { error: error.message }
   revalidatePath('/', 'layout')
   return { error: null }
 }
 
 export async function deactivatePreparation(id: string): Promise<ActionResult> {
-  await requireAuth()
+  const session = await requireAuth()
   const supabase = await createServerClient()
-  const { error } = await supabase.from('productions').update({ active: false }).eq('id', id)
+  const { error } = await supabase.from('productions').update({ active: false }).eq('id', id).eq('kitchen_user_id', session.userId)
   if (error) return { error: error.message }
   revalidatePath('/', 'layout')
   return { error: null }

@@ -5,7 +5,7 @@ import { LoteCard, type LotResult } from '@/components/LoteCard'
 import { URGENT_LOOKAHEAD_DAYS } from '@/lib/constants'
 
 export default async function UrgentPage(): Promise<React.JSX.Element> {
-  await requireAuth()
+  const session = await requireAuth()
   const supabase = await createServerClient()
 
   const now = new Date()
@@ -16,13 +16,15 @@ export default async function UrgentPage(): Promise<React.JSX.Element> {
     supabase
       .from('production_logs')
       .select('id, production_id, quantity, logged_at, expires_at, batch_number, productions!inner(name, unit, station)')
+      .eq('kitchen_user_id', session.userId)
       .not('batch_number', 'is', null)
       .gte('expires_at', startOfToday)
       .lt('expires_at', startOfDayAfterTomorrow)
       .order('expires_at', { ascending: true }),
     supabase
       .from('stock_exit_lots')
-      .select('batch_number, quantity'),
+      .select('batch_number, quantity')
+      .eq('kitchen_user_id', session.userId),
   ])
 
   if (logsResult.error) {

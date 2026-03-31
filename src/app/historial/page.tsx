@@ -41,7 +41,7 @@ export default async function HistorialPage({
 }: {
   searchParams: Promise<{ dia?: string }>
 }): Promise<React.JSX.Element> {
-  await requireAuth()
+  const session = await requireAuth()
   const supabase = await createServerClient()
 
   const { dia } = await searchParams
@@ -62,6 +62,7 @@ export default async function HistorialPage({
     supabase
       .from('production_logs')
       .select('production_id, quantity, logged_at, batch_number, productions!inner(name, unit)')
+      .eq('kitchen_user_id', session.userId)
       .gte('logged_at', sinceIso)
       .lte('logged_at', untilIso)
       .order('logged_at', { ascending: false })
@@ -69,6 +70,7 @@ export default async function HistorialPage({
     supabase
       .from('stock_exits')
       .select('id, production_id, quantity, reason, logged_at, stock_exit_lots(batch_number, quantity), productions(name, unit)')
+      .eq('kitchen_user_id', session.userId)
       .gte('logged_at', sinceIso)
       .lte('logged_at', untilIso)
       .order('logged_at', { ascending: false })

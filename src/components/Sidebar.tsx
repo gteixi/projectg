@@ -138,6 +138,7 @@ function LogoutButton() {
   )
 }
 
+
 export function Sidebar({ urgentCount = 0 }: { urgentCount?: number }) {
   const pathname = usePathname()
   const isUrgent = pathname.startsWith('/urgent')

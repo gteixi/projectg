@@ -1,7 +1,9 @@
 import { createServerClient } from '@/lib/supabase'
+import { getSession } from '@/lib/auth'
 import { Sidebar } from '@/components/Sidebar'
 
 export async function SidebarServer(): Promise<React.JSX.Element> {
+  const session = await getSession()
   const supabase = await createServerClient()
 
   const now = new Date()
@@ -12,12 +14,14 @@ export async function SidebarServer(): Promise<React.JSX.Element> {
     supabase
       .from('production_logs')
       .select('production_id, batch_number, quantity')
+      .eq('kitchen_user_id', session?.userId ?? '')
       .not('batch_number', 'is', null)
       .gte('expires_at', startOfToday)
       .lt('expires_at', endOfToday),
     supabase
       .from('stock_exit_lots')
-      .select('batch_number, quantity'),
+      .select('batch_number, quantity')
+      .eq('kitchen_user_id', session?.userId ?? ''),
   ])
 
   const exitedByBatch = new Map<string, number>()

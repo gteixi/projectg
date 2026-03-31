@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom'
 import { type FifoBreakdown, type ActiveLot } from '@/types/database'
 
 interface Props {
+  name: string
   quantity: string
   unitLabel: string
   reasonLabel: string
@@ -17,6 +18,7 @@ interface Props {
 }
 
 export function SaleConfirmModal({
+  name,
   quantity,
   unitLabel,
   reasonLabel,
@@ -38,7 +40,8 @@ export function SaleConfirmModal({
           <button onClick={onCorrect} disabled={pending} className="w-10 h-10 flex items-center justify-center rounded-xl text-gray-400 hover:bg-gray-100 disabled:opacity-50 text-xl">✕</button>
         </div>
         <div className="px-8 pb-6 flex flex-col items-center gap-1 text-center">
-          <div className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-2">Confirmar venda</div>
+          <div className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-2">Confirmar sortida</div>
+          <div className="text-2xl font-bold text-gray-900">{name}</div>
           <div className="text-5xl font-bold text-red-600 tabular-nums mt-3">
             -{quantity}
             <span className="text-2xl font-semibold text-gray-400 ml-2">{unitLabel}</span>

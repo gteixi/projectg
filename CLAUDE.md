@@ -50,15 +50,19 @@ La base de datos de producción es del cliente y está en uso real. Todo el desa
 - Solo aplicar a producción con `npx supabase db push` cuando estén validadas
 
 ## Base de datos (Supabase)
-- restaurant_id de prueba: 11111111-1111-1111-1111-111111111111
-- Vista principal: daily_stock (production_id, name, unit, shelf_life_hours, station, stock_total, next_expiry)
-- Tabla producciones: productions (name, unit, shelf_life_hours, station, active)
-- Tabla logs: production_logs (production_id, quantity, logged_at, expires_at, batch_number)
+- Multi-tenant: cada kitchen_user = un restaurante. Todas las tablas de datos tienen `kitchen_user_id` (UUID, NOT NULL, FK → kitchen_users)
+- **REGLA CRÍTICA**: toda query a tablas de datos DEBE filtrar por `kitchen_user_id` del usuario logueado. Toda INSERT debe incluirlo. Sin excepciones.
+- Login por PIN (no Supabase Auth) — el aislamiento se hace en application code, no RLS
+- Usuarios de prueba: Guillem (PIN 1111), Demo (PIN 2222)
+- Vista principal: daily_stock (production_id, name, unit, shelf_life_hours, station, kitchen_user_id, stock_total, next_expiry)
+- Tabla producciones: productions (name, unit, shelf_life_hours, station, active, kitchen_user_id)
+- Tabla logs: production_logs (production_id, quantity, logged_at, expires_at, batch_number, kitchen_user_id)
   - quantity siempre positivo — las salidas van en stock_exits
-  - batch_number asignado automaticamente por trigger de DB
-- Tabla salidas: stock_exits (production_id, quantity, reason) + stock_exit_lots (exit_id, batch_number, quantity)
+  - batch_number asignado automaticamente por secuencia global
+- Tabla salidas: stock_exits (production_id, quantity, reason, kitchen_user_id) + stock_exit_lots (exit_id, batch_number, quantity, kitchen_user_id)
   - reason: 'merma' | 'venta'
   - Descuento de lotes por FIFO automatico o seleccion manual
+- Funciones SQL: get_consumption_summary y get_idle_productions aceptan p_user_id como parámetro
 - Nunca se borran registros
 
 ## Convenciones de código

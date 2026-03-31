@@ -12,6 +12,7 @@ import { computeFifo } from '@/lib/fifo'
 
 interface Props {
   productionId: string
+  name: string
   unit: string
   stock: number
   initialLots?: ActiveLot[]
@@ -21,7 +22,7 @@ interface Props {
   onManualMode?: (enabled: boolean) => void
 }
 
-export function SalePanel({ productionId, unit, stock, initialLots, expiredLots, onClose, onSuccess, onManualMode }: Props): React.JSX.Element {
+export function SalePanel({ productionId, name, unit, stock, initialLots, expiredLots, onClose, onSuccess, onManualMode }: Props): React.JSX.Element {
   const { showToast } = useToast()
   const [step, setStep] = useState<'input' | 'confirm'>('input')
   const [quantity, setQuantity] = useState('')
@@ -129,6 +130,7 @@ export function SalePanel({ productionId, unit, stock, initialLots, expiredLots,
 
   const modal = step === 'confirm' ? (
     <SaleConfirmModal
+      name={name}
       quantity={quantity}
       unitLabel={unitLabel}
       reasonLabel={reasonLabel}

@@ -21,7 +21,7 @@ export async function logProduction(
   shelfLifeHours: number | null,
   batchNumber: number,
 ): Promise<ProductionResult> {
-  await requireAuth()
+  const session = await requireAuth()
   if (quantity <= 0) return { error: 'La quantitat ha de ser major que 0', batch_number: null }
 
   const supabase = await createServerClient()
@@ -30,6 +30,7 @@ export async function logProduction(
     .from('production_logs')
     .select('*', { count: 'exact', head: true })
     .eq('batch_number', batchNumber)
+    .eq('kitchen_user_id', session.userId)
   if (count && count > 0) return { error: 'Ja existeix una producció amb aquest lot', batch_number: null }
 
   const now = new Date()
@@ -43,6 +44,7 @@ export async function logProduction(
     logged_at: now.toISOString(),
     expires_at: expiresAt,
     batch_number: batchNumber,
+    kitchen_user_id: session.userId,
   })
 
   if (error) return { error: error.message, batch_number: null }

@@ -9,19 +9,21 @@ import { TRAZABILIDAD_FETCH_LIMIT } from '@/lib/constants'
 const LOTS_COLUMNS = 'id, production_id, quantity, logged_at, expires_at, batch_number, productions(name, unit, station)' as const
 
 export default async function TrazabilidadPage(): Promise<React.JSX.Element> {
-  await requireAuth()
+  const session = await requireAuth()
   const supabase = await createServerClient()
 
   const [logsResult, exitsResult] = await Promise.all([
     supabase
       .from('production_logs')
       .select(LOTS_COLUMNS)
+      .eq('kitchen_user_id', session.userId)
       .not('batch_number', 'is', null)
       .order('logged_at', { ascending: false })
       .limit(TRAZABILIDAD_FETCH_LIMIT),
     supabase
       .from('stock_exit_lots')
-      .select('batch_number, quantity'),
+      .select('batch_number, quantity')
+      .eq('kitchen_user_id', session.userId),
   ])
 
   if (logsResult.error) {
