@@ -25,7 +25,7 @@ export function SearchInput({ value, onChange, placeholder = 'Buscar producciÃ³â
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full h-12 pl-10 pr-4 rounded-xl border border-[#e5e3de] bg-white text-base text-gray-900 overflow-hidden text-ellipsis placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400"
+        className="w-full h-12 pl-10 pr-4 rounded-xl border border-[#e5e3de] bg-white text-sm md:text-base text-gray-900 overflow-hidden text-ellipsis placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400"
       />
     </div>
   )

@@ -140,7 +140,7 @@ export function ProductionButton({ productionId, name, unit, shelfLifeHours, var
             if (e.key === 'Enter') handleConfirm()
             if (e.key === 'Escape') close()
           }}
-          className="w-24 md:w-32 h-14 text-left text-lg border border-[#e5e3de] rounded-xl px-3 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50 bg-white shrink-0 overflow-hidden text-ellipsis placeholder:text-gray-400"
+          className="w-24 md:w-32 h-14 text-left text-base md:text-lg border border-[#e5e3de] rounded-xl px-3 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50 bg-white shrink-0 overflow-hidden text-ellipsis placeholder:text-gray-400"
         />
         <span className="text-base text-gray-400 w-10 shrink-0">{truncUnit(unit)}</span>
         <button

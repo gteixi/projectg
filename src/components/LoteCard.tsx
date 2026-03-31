@@ -157,7 +157,7 @@ function LotSaleForm({ lot, onClose }: { lot: LotResult; onClose: () => void }):
           onKeyDown={(e) => { if (e.key === 'Enter') handleSale() }}
           autoFocus
           disabled={pending}
-          className="w-24 md:w-32 h-14 text-left text-lg border border-red-300 rounded-xl px-3 focus:outline-none focus:ring-2 focus:ring-red-400 disabled:opacity-50 bg-white shrink-0 overflow-hidden text-ellipsis placeholder:text-gray-400"
+          className="w-24 md:w-32 h-14 text-left text-base md:text-lg border border-red-300 rounded-xl px-3 focus:outline-none focus:ring-2 focus:ring-red-400 disabled:opacity-50 bg-white shrink-0 overflow-hidden text-ellipsis placeholder:text-gray-400"
         />
         <span className="text-base text-gray-400 w-10 shrink-0">{unitLabel}</span>
         <div className="flex-1 flex gap-1.5">
