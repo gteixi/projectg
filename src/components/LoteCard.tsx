@@ -246,8 +246,8 @@ export function LoteCard({ lot, variant, showSale = false }: { lot: LotResult; v
             </div>
           )}
 
-          <div className="flex items-center justify-between px-5 py-3">
-            <span className="text-sm font-medium text-gray-400 uppercase tracking-wide">Producció</span>
+          <div className="flex items-center justify-between gap-3 px-5 py-3">
+            <span className="text-sm font-medium text-gray-400 uppercase tracking-wide shrink-0">Producció</span>
             <div className="flex flex-col items-end gap-0.5">
               <span className="text-base font-bold tabular-nums text-gray-900">
                 {lot.quantity} <span className="text-sm font-medium text-gray-500">{lot.unit}</span>
@@ -256,8 +256,8 @@ export function LoteCard({ lot, variant, showSale = false }: { lot: LotResult; v
             </div>
           </div>
 
-          <div className="flex items-center justify-between px-5 py-3">
-            <span className="text-sm font-medium text-gray-400 uppercase tracking-wide">Caducitat</span>
+          <div className="flex items-center justify-between gap-3 px-5 py-3">
+            <span className="text-sm font-medium text-gray-400 uppercase tracking-wide shrink-0">Caducitat</span>
             {lot.expires_at
               ? <ExpiryBadge iso={lot.expires_at} />
               : <span className="text-sm text-gray-400">—</span>
