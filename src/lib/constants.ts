@@ -1,4 +1,4 @@
-import { Station, SaleReason } from '@/types/database'
+import { Station, SaleReason, ExitReason } from '@/types/database'
 
 export const STATIONS: Station[] = ['Partida', 'Congelador', 'Camara', 'Timbre']
 
@@ -10,6 +10,22 @@ export const SALE_REASONS: { value: SaleReason; label: string }[] = [
 export const REASON_LABELS: Record<SaleReason, string> = {
   merma: 'Merma',
   venta: 'Venta',
+}
+
+export const EXIT_REASONS: { value: ExitReason; label: string }[] = [
+  { value: 'caducitat', label: 'Caducitat' },
+  { value: 'mal_estat', label: 'Mal estat' },
+  { value: 'error_produccio', label: 'Error prod.' },
+  { value: 'accident', label: 'Accident' },
+  { value: 'altre', label: 'Altre' },
+]
+
+export const EXIT_REASON_LABELS: Record<ExitReason, string> = {
+  caducitat: 'Caducitat',
+  mal_estat: 'Mal estat',
+  error_produccio: 'Error producció',
+  accident: 'Accident',
+  altre: 'Altre',
 }
 
 export const UNITS = ['kg', 'L', 'raciones'] as const

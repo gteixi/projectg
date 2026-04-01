@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createServerClient } from '@/lib/supabase'
 import { requireAuth } from '@/lib/require-auth'
-import { type SaleReason, type ActiveLot, type FifoBreakdown, type ActionResult } from '@/types/database'
+import { type SaleReason, type ExitReason, type ActiveLot, type FifoBreakdown, type ActionResult } from '@/types/database'
 
 export async function getActiveLots(
   productionId: string
@@ -62,6 +62,7 @@ export async function createSaleExit(
   quantity: number,
   reason: SaleReason,
   lots: FifoBreakdown[],
+  exitReason?: ExitReason | null,
 ): Promise<ActionResult> {
   const session = await requireAuth()
   const supabase = await createServerClient()
@@ -72,6 +73,7 @@ export async function createSaleExit(
     p_reason: reason,
     p_kitchen_user_id: session.userId,
     p_lots: lots.map((l) => ({ batch_number: l.batch_number, quantity: l.quantity })),
+    p_exit_reason: exitReason ?? null,
   })
 
   if (error) return { error: error.message }

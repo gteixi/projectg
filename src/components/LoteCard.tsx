@@ -3,8 +3,8 @@
 import { useState, useTransition } from 'react'
 import { createPortal } from 'react-dom'
 import { formatDateTime, truncUnit, expirySemaphore } from '@/lib/format'
-import { LOCALE, SALE_REASONS } from '@/lib/constants'
-import { type Station, type SaleReason } from '@/types/database'
+import { LOCALE, SALE_REASONS, EXIT_REASONS, EXIT_REASON_LABELS } from '@/lib/constants'
+import { type Station, type SaleReason, type ExitReason } from '@/types/database'
 import { createSaleExit } from '@/lib/sale-actions'
 import { useToast } from '@/components/Toast'
 
@@ -50,12 +50,14 @@ function LotSaleForm({ lot, onClose }: { lot: LotResult; onClose: () => void }):
   const { showToast } = useToast()
   const [quantity, setQuantity] = useState('')
   const [reason, setReason] = useState<SaleReason>('merma')
+  const [exitReason, setExitReason] = useState<ExitReason>('caducitat')
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
   const [confirming, setConfirming] = useState<{ qty: number; reason: SaleReason } | null>(null)
 
   const unitLabel = truncUnit(lot.unit)
   const reasonLabel = SALE_REASONS.find((r) => r.value === reason)?.label ?? reason
+  const exitReasonLabel = reason === 'merma' ? EXIT_REASON_LABELS[exitReason] : null
 
   function handleSale(): void {
     setError(null)
@@ -83,6 +85,7 @@ function LotSaleForm({ lot, onClose }: { lot: LotResult; onClose: () => void }):
         confirming.qty,
         confirming.reason,
         [{ batch_number: lotNum, quantity: confirming.qty }],
+        confirming.reason === 'merma' ? exitReason : null,
       )
       if (result.error) {
         showToast(`Error: ${result.error}`)
@@ -110,7 +113,9 @@ function LotSaleForm({ lot, onClose }: { lot: LotResult; onClose: () => void }):
             {confirming.qty}
             <span className="text-2xl font-semibold text-gray-400 ml-2">{unitLabel}</span>
           </div>
-          <div className="mt-2 text-base font-semibold text-gray-600">{reasonLabel}</div>
+          <div className="mt-2 text-base font-semibold text-gray-600">
+            {reasonLabel}{exitReasonLabel ? ` — ${exitReasonLabel}` : ''}
+          </div>
           <div className="mt-3 flex flex-col gap-1.5 w-full">
             <div className="flex items-center justify-between px-3 py-1.5 bg-red-50 rounded-lg">
               <span className="flex items-center gap-1"><span className="text-xs text-gray-500">Lote</span><span className="text-xs font-mono font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-2 py-0.5">#{lot.lot_number}</span></span>
@@ -143,7 +148,7 @@ function LotSaleForm({ lot, onClose }: { lot: LotResult; onClose: () => void }):
   ) : null
 
   return (
-    <div className="px-5 py-3 flex flex-col gap-2">
+    <div className="px-5 py-3 flex flex-col gap-4">
       {confirmModal}
       <div className="flex items-center gap-2">
         <input
@@ -159,7 +164,7 @@ function LotSaleForm({ lot, onClose }: { lot: LotResult; onClose: () => void }):
           disabled={pending}
           className="w-24 md:w-32 h-14 text-left text-base md:text-lg border border-red-300 rounded-xl px-3 focus:outline-none focus:ring-2 focus:ring-red-400 disabled:opacity-50 bg-white shrink-0 overflow-hidden text-ellipsis placeholder:text-gray-400"
         />
-        <span className="text-base text-gray-400 w-10 shrink-0">{unitLabel}</span>
+        <span className="text-base text-gray-400 shrink-0 md:w-10">{unitLabel}</span>
         <div className="flex-1 flex gap-1.5">
           {SALE_REASONS.map((r) => (
             <button
@@ -184,6 +189,24 @@ function LotSaleForm({ lot, onClose }: { lot: LotResult; onClose: () => void }):
           ✕
         </button>
       </div>
+      {reason === 'merma' && (
+        <div className="flex gap-2 flex-wrap">
+          {EXIT_REASONS.map((r) => (
+            <button
+              key={r.value}
+              onClick={() => { setExitReason(r.value); setError(null) }}
+              disabled={pending}
+              className={`h-12 px-4 rounded-xl text-base font-medium border transition-colors disabled:opacity-50 ${
+                exitReason === r.value
+                  ? 'bg-gray-800 border-gray-800 text-white'
+                  : 'border-[#e5e3de] text-gray-500 hover:bg-gray-50'
+              }`}
+            >
+              {r.label}
+            </button>
+          ))}
+        </div>
+      )}
       {error && <p className="text-sm text-red-600 mt-1.5">{error}</p>}
       <button
         onClick={handleSale}

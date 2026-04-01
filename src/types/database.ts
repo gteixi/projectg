@@ -1,5 +1,6 @@
 export type Station = 'Partida' | 'Congelador' | 'Camara' | 'Timbre'
 export type SaleReason = 'merma' | 'venta'
+export type ExitReason = 'caducitat' | 'mal_estat' | 'error_produccio' | 'accident' | 'altre'
 
 export interface ActiveLot {
   log_id: string
@@ -50,6 +51,7 @@ export interface StockExit {
   production_id: string
   quantity: number
   reason: SaleReason
+  exit_reason: ExitReason | null
   logged_at: string
   kitchen_user_id: string
 }

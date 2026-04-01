@@ -3,10 +3,10 @@
 import { useState, useTransition, useEffect } from 'react'
 import { getActiveLots, createSaleExit } from '@/lib/sale-actions'
 import { SaleConfirmModal } from './SaleConfirmModal'
-import { type ActiveLot, type FifoBreakdown, type SaleReason } from '@/types/database'
+import { type ActiveLot, type FifoBreakdown, type SaleReason, type ExitReason } from '@/types/database'
 import { truncUnit } from '@/lib/format'
 import { useToast } from '@/components/Toast'
-import { SALE_REASONS, FIFO_TOLERANCE, FIFO_ROUNDING_FACTOR } from '@/lib/constants'
+import { SALE_REASONS, EXIT_REASONS, EXIT_REASON_LABELS, FIFO_TOLERANCE, FIFO_ROUNDING_FACTOR } from '@/lib/constants'
 import { ManualLotPicker } from './ManualLotPicker'
 import { computeFifo } from '@/lib/fifo'
 
@@ -27,11 +27,12 @@ export function SalePanel({ productionId, name, unit, stock, initialLots, expire
   const [step, setStep] = useState<'input' | 'confirm'>('input')
   const [quantity, setQuantity] = useState('')
   const [reason, setReason] = useState<SaleReason>('merma')
+  const [exitReason, setExitReason] = useState<ExitReason>('caducitat')
   const [activeLots, setActiveLots] = useState<ActiveLot[]>(initialLots ?? [])
   const [lotsLoading, setLotsLoading] = useState(!initialLots)
   const [lotsError, setLotsError] = useState<string | null>(null)
 
-  const lots = reason === 'merma' ? [...activeLots, ...(expiredLots ?? [])] : activeLots
+  const lots = reason === 'merma' ? [...(expiredLots ?? []), ...activeLots] : activeLots
   const availableStock = reason === 'merma' ? stock + (expiredLots ?? []).reduce((s, l) => s + l.quantity, 0) : stock
   const [breakdown, setBreakdown] = useState<FifoBreakdown[]>([])
   const [inputError, setInputError] = useState<string | null>(null)
@@ -111,7 +112,7 @@ export function SalePanel({ productionId, name, unit, stock, initialLots, expire
   function handleSubmit(): void {
     const qty = parseFloat(quantity)
     startTransition(async () => {
-      const result = await createSaleExit(productionId, qty, reason, breakdown)
+      const result = await createSaleExit(productionId, qty, reason, breakdown, reason === 'merma' ? exitReason : null)
       if (result.error) {
         showToast(`Error registrant sortida: ${result.error}`)
       } else {
@@ -122,6 +123,7 @@ export function SalePanel({ productionId, name, unit, stock, initialLots, expire
 
   const unitLabel = truncUnit(unit)
   const reasonLabel = SALE_REASONS.find((r) => r.value === reason)?.label ?? ''
+  const exitReasonLabel = reason === 'merma' ? EXIT_REASON_LABELS[exitReason] : null
 
   function handleCorrect(): void {
     setStep('input')
@@ -134,6 +136,7 @@ export function SalePanel({ productionId, name, unit, stock, initialLots, expire
       quantity={quantity}
       unitLabel={unitLabel}
       reasonLabel={reasonLabel}
+      exitReasonLabel={exitReasonLabel}
       stock={availableStock}
       lots={lots}
       breakdown={breakdown}
@@ -145,7 +148,7 @@ export function SalePanel({ productionId, name, unit, stock, initialLots, expire
   ) : null
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-4">
       {modal}
       <div className="flex items-center gap-2">
         <input
@@ -178,6 +181,24 @@ export function SalePanel({ productionId, name, unit, stock, initialLots, expire
           ))}
         </div>
       </div>
+      {reason === 'merma' && (
+        <div className="flex gap-2 flex-wrap">
+          {EXIT_REASONS.map((r) => (
+            <button
+              key={r.value}
+              onClick={() => { setExitReason(r.value); setInputError(null) }}
+              disabled={pending}
+              className={`h-12 px-4 rounded-xl text-base font-medium border transition-colors disabled:opacity-50 ${
+                exitReason === r.value
+                  ? 'bg-gray-800 border-gray-800 text-white'
+                  : 'border-[#e5e3de] text-gray-500 hover:bg-gray-50'
+              }`}
+            >
+              {r.label}
+            </button>
+          ))}
+        </div>
+      )}
       {lotsError && <span className="text-sm text-red-600">{lotsError}</span>}
       {!lotsLoading && !lotsError && lots.length === 0 && (
         <span className="text-sm text-gray-400">Cap lot actiu avui</span>

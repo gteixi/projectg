@@ -8,6 +8,7 @@ interface Props {
   quantity: string
   unitLabel: string
   reasonLabel: string
+  exitReasonLabel?: string | null
   stock: number
   lots: ActiveLot[]
   breakdown: FifoBreakdown[]
@@ -22,6 +23,7 @@ export function SaleConfirmModal({
   quantity,
   unitLabel,
   reasonLabel,
+  exitReasonLabel,
   stock,
   lots,
   breakdown,
@@ -46,7 +48,9 @@ export function SaleConfirmModal({
             -{quantity}
             <span className="text-2xl font-semibold text-gray-400 ml-2">{unitLabel}</span>
           </div>
-          <div className="mt-2 text-base font-semibold text-gray-600">{reasonLabel}</div>
+          <div className="mt-2 text-base font-semibold text-gray-600">
+            {reasonLabel}{exitReasonLabel ? ` — ${exitReasonLabel}` : ''}
+          </div>
           <div className="mt-3 flex flex-col gap-1.5 w-full">
             {breakdown.map((b) => {
               const lot = lots.find((l) => l.batch_number === b.batch_number)

@@ -4,7 +4,9 @@ import { SidebarServer } from '@/components/SidebarServer'
 import { DatePicker } from '@/components/DatePicker'
 import { LogoutButton } from '@/components/LogoutButton'
 import { formatDateLabel } from '@/lib/format'
-import { type Station } from '@/types/database'
+import { type Station, type ExitReason } from '@/types/database'
+import { EXIT_REASON_LABELS } from '@/lib/constants'
+import { DemandaTable } from '@/components/DemandaTable'
 
 const STATION_COLORS: Record<Station, string> = {
   Partida: 'bg-orange-100 text-orange-700',
@@ -53,9 +55,20 @@ export default async function InformePage({
     return d.toISOString().slice(0, 10)
   })()
 
-  const [summaryResult, idleResult] = await Promise.all([
+  const dateToNext = new Date(selectedDate + 'T12:00:00')
+  dateToNext.setDate(dateToNext.getDate() + 1)
+  const dateToExclusive = dateToNext.toISOString().slice(0, 10)
+
+  const [summaryResult, idleResult, mermaReasonsResult] = await Promise.all([
     supabase.rpc('get_consumption_summary', { date_from: dateFrom, date_to: dateTo, p_user_id: session.userId }),
     supabase.rpc('get_idle_productions', { date_from: dateFrom, date_to: dateTo, p_user_id: session.userId }),
+    supabase
+      .from('stock_exits')
+      .select('exit_reason, quantity')
+      .eq('kitchen_user_id', session.userId)
+      .eq('reason', 'merma')
+      .gte('logged_at', dateFrom)
+      .lt('logged_at', dateToExclusive),
   ])
 
   if (summaryResult.error) return <pre className="p-8 text-red-500">{summaryResult.error.message}</pre>
@@ -63,6 +76,15 @@ export default async function InformePage({
 
   const rows = (summaryResult.data ?? []) as ConsumptionRow[]
   const idle = (idleResult.data ?? []) as IdleRow[]
+
+  const mermaByReason = new Map<string, number>()
+  for (const row of mermaReasonsResult.data ?? []) {
+    const key = (row.exit_reason as string) ?? 'sense_motiu'
+    mermaByReason.set(key, (mermaByReason.get(key) ?? 0) + Number(row.quantity))
+  }
+  const mermaReasonRows = [...mermaByReason.entries()]
+    .map(([reason, total]) => ({ reason, total }))
+    .sort((a, b) => b.total - a.total)
 
   // --- Métricas resumen ---
   const totalSalidas = rows.reduce((s, r) => s + r.total_venda + r.total_merma, 0)
@@ -125,86 +147,7 @@ export default async function InformePage({
             {demanda.length === 0 ? (
               <p className="px-4 py-8 text-center text-gray-400 text-base">Sense dades en els últims 7 dies</p>
             ) : (
-              <>
-                {/* Mobile: tarjetas apiladas */}
-                <ul className="divide-y divide-[#e5e3de] md:hidden">
-                  {demanda.map((r) => (
-                    <li key={r.production_id} className="px-4 py-3">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="font-medium text-gray-900">{r.name}</span>
-                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${STATION_COLORS[r.station]}`}>
-                          {r.station}
-                        </span>
-                      </div>
-                      <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                        <div>
-                          <p className="text-gray-500">Consum/dia</p>
-                          <p className="font-medium text-gray-900">{r.consumoDia.toFixed(1)} {r.unit}</p>
-                        </div>
-                        <div>
-                          <p className="text-gray-500">Suggerit/set.</p>
-                          <p className="font-medium text-gray-900">{r.sugeridoSemana.toFixed(1)} {r.unit}</p>
-                        </div>
-                        <div>
-                          <p className="text-gray-500">Merma</p>
-                          <p className={`font-semibold ${r.pctMerma >= 0.1 ? 'text-red-600' : 'text-green-600'}`}>
-                            {(r.pctMerma * 100).toFixed(0)}%
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-gray-500">Eficiència</p>
-                          <p className={`font-semibold ${r.ratioEficiencia > 1.5 ? 'text-red-600' : r.ratioEficiencia > 1.2 ? 'text-yellow-600' : 'text-green-600'}`}>
-                            x{r.ratioEficiencia.toFixed(1)}
-                          </p>
-                        </div>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-
-                {/* Tablet+: tabla */}
-                <div className="hidden md:block">
-                  <table className="w-full text-left">
-                    <thead>
-                      <tr className="border-b border-[#e5e3de] text-sm text-gray-500">
-                        <th className="px-6 py-3 font-medium">Preparació</th>
-                        <th className="px-6 py-3 font-medium text-right">Consum/dia</th>
-                        <th className="px-6 py-3 font-medium text-right">% Merma</th>
-                        <th className="px-6 py-3 font-medium text-right">Eficiència</th>
-                        <th className="px-6 py-3 font-medium text-right">Suggerit/setmana</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[#e5e3de]">
-                      {demanda.map((r) => (
-                        <tr key={r.production_id}>
-                          <td className="px-6 py-3">
-                            <span className="font-medium text-gray-900">{r.name}</span>
-                            <span className={`ml-2 inline-block text-xs font-semibold px-2 py-0.5 rounded-full ${STATION_COLORS[r.station]}`}>
-                              {r.station}
-                            </span>
-                          </td>
-                          <td className="px-6 py-3 text-right font-medium text-gray-900">
-                            {r.consumoDia.toFixed(1)} {r.unit}
-                          </td>
-                          <td className="px-6 py-3 text-right">
-                            <span className={`font-semibold ${r.pctMerma >= 0.1 ? 'text-red-600' : 'text-green-600'}`}>
-                              {(r.pctMerma * 100).toFixed(0)}%
-                            </span>
-                          </td>
-                          <td className="px-6 py-3 text-right">
-                            <span className={`font-semibold ${r.ratioEficiencia > 1.5 ? 'text-red-600' : r.ratioEficiencia > 1.2 ? 'text-yellow-600' : 'text-green-600'}`}>
-                              x{r.ratioEficiencia.toFixed(1)}
-                            </span>
-                          </td>
-                          <td className="px-6 py-3 text-right font-medium text-gray-900">
-                            {r.sugeridoSemana.toFixed(1)} {r.unit}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </>
+              <DemandaTable rows={demanda} />
             )}
           </div>
 
@@ -231,7 +174,36 @@ export default async function InformePage({
             </div>
           )}
 
-          {/* 4. Preparacions sense moviment */}
+          {/* 4. Desglossament merma per motiu */}
+          {mermaReasonRows.length > 0 && (
+            <div className="bg-white rounded-xl border border-[#e5e3de] overflow-hidden mb-6">
+              <div className="px-4 py-3 border-b border-[#e5e3de] md:px-6">
+                <h2 className="text-base font-semibold text-gray-800">Merma per motiu</h2>
+              </div>
+              <ul className="divide-y divide-[#e5e3de]">
+                {mermaReasonRows.map((r) => {
+                  const label = r.reason in EXIT_REASON_LABELS
+                    ? EXIT_REASON_LABELS[r.reason as ExitReason]
+                    : 'Sense motiu'
+                  const pct = totalMerma > 0 ? (r.total / totalMerma) * 100 : 0
+                  return (
+                    <li key={r.reason} className="px-4 py-3 flex items-center justify-between md:px-6">
+                      <span className="font-medium text-gray-900">{label}</span>
+                      <div className="flex items-center gap-3">
+                        <div className="w-24 h-2 bg-gray-100 rounded-full overflow-hidden">
+                          <div className="h-full bg-red-400 rounded-full" style={{ width: `${pct}%` }} />
+                        </div>
+                        <span className="text-sm font-semibold text-gray-600 w-12 text-right">{pct.toFixed(0)}%</span>
+                        <span className="text-sm text-gray-400 w-16 text-right">{r.total}</span>
+                      </div>
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
+          )}
+
+          {/* 5. Preparacions sense moviment */}
           {idle.length > 0 && (
             <div className="bg-white rounded-xl border border-[#e5e3de] overflow-hidden">
               <div className="px-4 py-3 border-b border-[#e5e3de] md:px-6">
