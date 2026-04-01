@@ -2,14 +2,13 @@ import { requireAuth } from '@/lib/require-auth'
 import { createServerClient } from '@/lib/supabase'
 import { SidebarServer } from '@/components/SidebarServer'
 import { LoteCard, type LotResult } from '@/components/LoteCard'
-import { URGENT_LOOKAHEAD_DAYS } from '@/lib/constants'
+import { URGENT_LOOKAHEAD_DAYS, LOCALE } from '@/lib/constants'
 
 export default async function UrgentPage(): Promise<React.JSX.Element> {
   const session = await requireAuth()
   const supabase = await createServerClient()
 
   const now = new Date()
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString()
   const startOfDayAfterTomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + URGENT_LOOKAHEAD_DAYS).toISOString()
 
   const [logsResult, exitsResult] = await Promise.all([
@@ -18,7 +17,7 @@ export default async function UrgentPage(): Promise<React.JSX.Element> {
       .select('id, production_id, quantity, logged_at, expires_at, batch_number, productions!inner(name, unit, station)')
       .eq('kitchen_user_id', session.userId)
       .not('batch_number', 'is', null)
-      .gte('expires_at', startOfToday)
+      .not('expires_at', 'is', null)
       .lt('expires_at', startOfDayAfterTomorrow)
       .order('expires_at', { ascending: true }),
     supabase
@@ -73,6 +72,27 @@ export default async function UrgentPage(): Promise<React.JSX.Element> {
   const warning = lots.filter((l) => l.bucket === 'warning')
   const tomorrow = lots.filter((l) => l.bucket === 'tomorrow')
 
+  // Group critical lots by expiry day (oldest first from query order)
+  const criticalByDay = new Map<string, { label: string; lots: typeof critical }>()
+  const todayStr = now.toDateString()
+  const yesterdayStr = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1).toDateString()
+  for (const lot of critical) {
+    const dayStr = new Date(lot.expires_at!).toDateString()
+    if (!criticalByDay.has(dayStr)) {
+      let label: string
+      if (dayStr === todayStr) {
+        label = 'Avui'
+      } else if (dayStr === yesterdayStr) {
+        label = 'Ahir'
+      } else {
+        label = new Date(dayStr).toLocaleDateString(LOCALE, { weekday: 'long', day: 'numeric', month: 'short' })
+      }
+      criticalByDay.set(dayStr, { label, lots: [] })
+    }
+    criticalByDay.get(dayStr)!.lots.push(lot)
+  }
+  const criticalDays = [...criticalByDay.values()]
+
   return (
     <div className="flex min-h-screen">
       <SidebarServer />
@@ -92,9 +112,30 @@ export default async function UrgentPage(): Promise<React.JSX.Element> {
               {critical.length > 0 && (
                 <section>
                   <h2 className="text-sm font-semibold uppercase tracking-wider text-red-600 mb-3">Caducats</h2>
-                  <div className="flex flex-col gap-2">
-                    {critical.map((lot) => <LoteCard key={lot.id} lot={lot} variant="critical" showSale />)}
-                  </div>
+                  {criticalDays.length === 1 ? (
+                    <div className="flex flex-col gap-2">
+                      {criticalDays[0].lots.map((lot) => <LoteCard key={lot.id} lot={lot} variant="critical" showSale />)}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-3">
+                      {criticalDays.map((group, i) => (
+                        <details key={group.label} open={i === criticalDays.length - 1} className="group rounded-xl bg-red-50 px-3 py-2">
+                          <summary className="flex items-center justify-between list-none cursor-pointer select-none [&::-webkit-details-marker]:hidden py-1">
+                            <span className="text-sm font-semibold text-red-600 capitalize">{group.label} <span className="text-red-400 font-normal">({group.lots.length})</span></span>
+                            <svg
+                              width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                              className="text-red-400 transition-transform group-open:rotate-180"
+                            >
+                              <path d="m6 9 6 6 6-6" />
+                            </svg>
+                          </summary>
+                          <div className="flex flex-col gap-2 mt-2">
+                            {group.lots.map((lot) => <LoteCard key={lot.id} lot={lot} variant="critical" showSale />)}
+                          </div>
+                        </details>
+                      ))}
+                    </div>
+                  )}
                 </section>
               )}
               {warning.length > 0 && (

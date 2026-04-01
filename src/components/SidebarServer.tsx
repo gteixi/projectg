@@ -1,14 +1,14 @@
 import { createServerClient } from '@/lib/supabase'
 import { getSession } from '@/lib/auth'
 import { Sidebar } from '@/components/Sidebar'
+import { URGENT_LOOKAHEAD_DAYS } from '@/lib/constants'
 
 export async function SidebarServer(): Promise<React.JSX.Element> {
   const session = await getSession()
   const supabase = await createServerClient()
 
   const now = new Date()
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString()
-  const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).toISOString()
+  const startOfDayAfterTomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + URGENT_LOOKAHEAD_DAYS).toISOString()
 
   const [logsResult, exitsResult] = await Promise.all([
     supabase
@@ -16,8 +16,8 @@ export async function SidebarServer(): Promise<React.JSX.Element> {
       .select('production_id, batch_number, quantity')
       .eq('kitchen_user_id', session?.userId ?? '')
       .not('batch_number', 'is', null)
-      .gte('expires_at', startOfToday)
-      .lt('expires_at', endOfToday),
+      .not('expires_at', 'is', null)
+      .lt('expires_at', startOfDayAfterTomorrow),
     supabase
       .from('stock_exit_lots')
       .select('batch_number, quantity')

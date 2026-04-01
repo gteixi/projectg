@@ -24,19 +24,19 @@ export function HistorialPrepRow({ name, total_produced, unit, lot_count, entrie
   return (
     <>
       <li
-        className={`grid grid-cols-[auto_1fr_auto_auto] items-center gap-x-3 px-4 py-3 md:px-6 cursor-pointer select-none transition-colors ${open ? 'bg-gray-50' : 'hover:bg-gray-50'}`}
+        className={`grid grid-cols-[auto_1fr_auto_auto] md:grid-cols-[12px_1fr_56px_112px] items-center gap-x-1.5 md:gap-x-3 px-4 py-3 md:px-6 cursor-pointer select-none transition-colors ${open ? 'bg-gray-50' : 'hover:bg-gray-50'}`}
         onClick={() => setOpen((v) => !v)}
       >
         <span className="w-3 h-3 rounded-full bg-gray-400" />
         <span className="text-base font-medium text-gray-900 min-w-0 truncate">{name}</span>
-        <span className="w-14 text-right">
+        <span className="w-10 md:w-14 text-right md:text-left">
           {lot_count > 0 && (
             <span className="text-xs font-semibold text-gray-400 bg-gray-100 rounded-full px-2 py-0.5 whitespace-nowrap">
               {lot_count} {lot_count === 1 ? 'lot' : 'lots'}
             </span>
           )}
         </span>
-        <span className="text-sm font-semibold tabular-nums text-right w-28 text-gray-700">
+        <span className="text-sm font-semibold tabular-nums text-right w-20 md:w-28 text-gray-700">
           {total_produced} {unit}
         </span>
       </li>
