@@ -119,7 +119,7 @@ export default async function UrgentPage(): Promise<React.JSX.Element> {
                   ) : (
                     <div className="flex flex-col gap-3">
                       {criticalDays.map((group, i) => (
-                        <details key={group.label} open={i === criticalDays.length - 1} className="group rounded-xl bg-red-50 px-3 py-2">
+                        <details key={group.label} open className="group rounded-xl bg-red-50 px-3 py-2">
                           <summary className="flex items-center justify-between list-none cursor-pointer select-none [&::-webkit-details-marker]:hidden py-1">
                             <span className="text-sm font-semibold text-red-600 capitalize">{group.label} <span className="text-red-400 font-normal">({group.lots.length})</span></span>
                             <svg
