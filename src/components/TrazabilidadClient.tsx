@@ -106,27 +106,27 @@ export function TrazabilidadClient({ allResults }: Props): React.JSX.Element {
         </div>
       ) : (
         <>
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-2">
             {paginated.map((r) => <LoteCard key={r.id} lot={r} />)}
           </div>
 
           {totalPages > 1 && (
-            <div className="flex items-center justify-between mt-6 gap-3">
+            <div className="flex items-center justify-between mt-6 gap-2">
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="h-12 px-5 rounded-xl border border-[#e5e3de] bg-white text-base font-semibold text-gray-700 disabled:opacity-40 hover:bg-gray-50 transition-colors"
+                className="h-12 px-3 sm:px-5 rounded-xl border border-[#e5e3de] bg-white text-sm sm:text-base font-semibold text-gray-700 disabled:opacity-40 hover:bg-gray-50 transition-colors whitespace-nowrap"
               >
                 ← Anterior
               </button>
-              <span className="text-sm text-gray-500 tabular-nums">
+              <span className="text-xs sm:text-sm text-gray-500 tabular-nums text-center min-w-0">
                 {page} / {totalPages}
-                <span className="text-gray-400 ml-1.5">({filtered.length} lots)</span>
+                <span className="hidden sm:inline text-gray-400 ml-1.5">({filtered.length} lots)</span>
               </span>
               <button
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
-                className="h-12 px-5 rounded-xl border border-[#e5e3de] bg-white text-base font-semibold text-gray-700 disabled:opacity-40 hover:bg-gray-50 transition-colors"
+                className="h-12 px-3 sm:px-5 rounded-xl border border-[#e5e3de] bg-white text-sm sm:text-base font-semibold text-gray-700 disabled:opacity-40 hover:bg-gray-50 transition-colors whitespace-nowrap"
               >
                 Següent →
               </button>

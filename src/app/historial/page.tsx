@@ -42,7 +42,7 @@ export default async function HistorialPage({
       .limit(HISTORIAL_LOGS_LIMIT),
     supabase
       .from('stock_exits')
-      .select('id, production_id, quantity, reason, logged_at, stock_exit_lots(batch_number, quantity), productions(name, unit)')
+      .select('id, production_id, quantity, reason, exit_reason, logged_at, stock_exit_lots(batch_number, quantity), productions(name, unit)')
       .eq('kitchen_user_id', session.userId)
       .gte('logged_at', sinceIso)
       .lte('logged_at', untilIso)
@@ -73,7 +73,7 @@ export default async function HistorialPage({
     })
   }
 
-  const exitsByDate = new Map<string, { sortTime: string; exit_id: string; name: string; unit: string; quantity: number; reason: SaleReason; lots: { batch_number: number; quantity: number; time: string }[] }[]>()
+  const exitsByDate = new Map<string, { sortTime: string; exit_id: string; name: string; unit: string; quantity: number; reason: SaleReason; exitReason: string | null; lots: { batch_number: number; quantity: number; time: string }[] }[]>()
   for (const exit of exitsResult.data ?? []) {
     const dateStr = (exit.logged_at as string).slice(0, 10)
     if (!exitsByDate.has(dateStr)) exitsByDate.set(dateStr, [])
@@ -86,6 +86,7 @@ export default async function HistorialPage({
       unit: prod?.unit ?? '',
       quantity: exit.quantity as number,
       reason: exit.reason as SaleReason,
+      exitReason: (exit.exit_reason as string | null) ?? null,
       lots: exitLots.map((l) => ({ batch_number: l.batch_number, quantity: l.quantity, time: formatTime(exit.logged_at as string) })),
       sortTime: exit.logged_at as string,
     })

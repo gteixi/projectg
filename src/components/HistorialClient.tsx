@@ -21,6 +21,7 @@ type SaleSummary = {
   unit: string
   quantity: number
   reason: SaleReason
+  exitReason: string | null
   lots: SaleDetail[]
 }
 
@@ -116,6 +117,7 @@ export function HistorialClient({ days }: { days: DaySummary[] }): React.JSX.Ele
                         unit={item.data.unit}
                         quantity={item.data.quantity}
                         reason={item.data.reason}
+                        exitReason={item.data.exitReason}
                         lots={item.data.lots}
                         defaultOpen={isNumeric && q !== '' && itemHasLotMatch(item, q)}
                       />

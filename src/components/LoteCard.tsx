@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { createPortal } from 'react-dom'
-import { formatDateTime, truncUnit, expirySemaphore } from '@/lib/format'
+import { formatDateTime, formatExpiryShort, truncUnit, expirySemaphore } from '@/lib/format'
 import { LOCALE, SALE_REASONS, EXIT_REASONS, EXIT_REASON_LABELS } from '@/lib/constants'
 import { type Station, type SaleReason, type ExitReason } from '@/types/database'
 import { createSaleExit } from '@/lib/sale-actions'
@@ -32,6 +32,24 @@ const BADGE_CLS = {
   yellow: 'bg-yellow-100 text-yellow-700',
   green: 'bg-green-100 text-green-700',
 } as const
+
+const DOT_CLS = {
+  red: 'bg-red-500',
+  yellow: 'bg-yellow-500',
+  green: 'bg-green-500',
+} as const
+
+function ExpiryDot({ iso }: { iso: string }): React.JSX.Element {
+  const s = expirySemaphore(iso)
+  const date = new Date(iso)
+  const time = date.toLocaleString(LOCALE, { hour: '2-digit', minute: '2-digit' })
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <span className={`w-2.5 h-2.5 rounded-full ${DOT_CLS[s]}`} />
+      <span className="text-xs text-gray-500">{s === 'red' ? formatExpiryShort(iso) : time}</span>
+    </span>
+  )
+}
 
 function ExpiryBadge({ iso }: { iso: string }): React.JSX.Element {
   const s = expirySemaphore(iso)
@@ -236,7 +254,7 @@ export function LoteCard({ lot, variant, showSale = false }: { lot: LotResult; v
   return (
     <div className={`rounded-xl border overflow-hidden ${cardCls}`}>
       <button
-        className={`w-full flex items-center gap-3 px-5 py-4 text-left transition-colors ${open ? 'bg-black/5' : 'hover:bg-black/5'}`}
+        className={`w-full flex items-center gap-3 px-3 py-3 md:px-5 md:py-4 text-left transition-colors ${open ? 'bg-black/5' : 'hover:bg-black/5'}`}
         onClick={() => { setOpen((v) => { if (v) setShowForm(false); return !v }) }}
       >
         <span className="shrink-0 w-[2.5rem] flex justify-start">
@@ -246,9 +264,14 @@ export function LoteCard({ lot, variant, showSale = false }: { lot: LotResult; v
           {lot.preparation_name}
         </span>
         {lot.expires_at && (
-          <span className="shrink-0 hidden sm:block">
-            <ExpiryBadge iso={lot.expires_at} />
-          </span>
+          <>
+            <span className="shrink-0 sm:hidden">
+              <ExpiryDot iso={lot.expires_at} />
+            </span>
+            <span className="shrink-0 hidden sm:block">
+              <ExpiryBadge iso={lot.expires_at} />
+            </span>
+          </>
         )}
         <svg
           className={`w-4 h-4 text-gray-400 shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
