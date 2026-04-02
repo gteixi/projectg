@@ -10,7 +10,7 @@ function formatShelfLife(hours: number): string {
   return `${hours}h`
 }
 
-export function ShelfLifeInfo({ hours, onToggle, onEdit, align }: { hours: number; onToggle?: (open: boolean) => void; onEdit?: () => void; align?: 'right' }): React.JSX.Element {
+export function ShelfLifeInfo({ hours, onToggle, onEdit, align }: { hours: number | null; onToggle?: (open: boolean) => void; onEdit?: () => void; align?: 'right' }): React.JSX.Element {
   const [open, setOpen] = useState(false)
 
   function toggle() {
@@ -40,7 +40,11 @@ export function ShelfLifeInfo({ hours, onToggle, onEdit, align }: { hours: numbe
       )}
       {open && (
         <div className="basis-full text-sm text-gray-500">
-          Caducitat: <span className="font-semibold text-gray-700">{formatShelfLife(hours)}</span>
+          {hours != null ? (
+            <>Caducitat: <span className="font-semibold text-gray-700">{formatShelfLife(hours)}</span></>
+          ) : (
+            <span className="font-semibold text-gray-700">Sense caducitat</span>
+          )}
           {onEdit && (
             <>
               <span className="mx-1.5 text-gray-300">·</span>

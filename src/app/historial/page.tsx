@@ -53,7 +53,7 @@ export default async function HistorialPage({
   if (logsResult.error) return <pre className="p-8 text-red-500">{logsResult.error.message}</pre>
   if (exitsResult.error) return <pre className="p-8 text-red-500">{exitsResult.error.message}</pre>
 
-  type DayLog = { quantity: number; batch_number: number | null; logged_at: string; name: string; unit: string }
+  type DayLog = { quantity: number; batch_number: string | null; logged_at: string; name: string; unit: string }
   const byDate = new Map<string, Map<string, DayLog[]>>()
 
   for (const log of logsResult.data ?? []) {
@@ -66,14 +66,14 @@ export default async function HistorialPage({
     if (!byPrep.has(pid)) byPrep.set(pid, [])
     byPrep.get(pid)!.push({
       quantity: log.quantity as number,
-      batch_number: log.batch_number as number | null,
+      batch_number: log.batch_number as string | null,
       logged_at: log.logged_at as string,
       name: prodTyped.name,
       unit: prodTyped.unit,
     })
   }
 
-  const exitsByDate = new Map<string, { sortTime: string; exit_id: string; name: string; unit: string; quantity: number; reason: SaleReason; exitReason: string | null; lots: { batch_number: number; quantity: number; time: string }[] }[]>()
+  const exitsByDate = new Map<string, { sortTime: string; exit_id: string; name: string; unit: string; quantity: number; reason: SaleReason; exitReason: string | null; lots: { batch_number: string; quantity: number; time: string }[] }[]>()
   for (const exit of exitsResult.data ?? []) {
     const dateStr = (exit.logged_at as string).slice(0, 10)
     if (!exitsByDate.has(dateStr)) exitsByDate.set(dateStr, [])

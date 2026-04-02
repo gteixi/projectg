@@ -17,7 +17,7 @@ export async function getActiveLots(
   const [logsResult, exitsResult] = await Promise.all([
     supabase
       .from('production_logs')
-      .select('id, batch_number, quantity, expires_at')
+      .select('id, batch_number, quantity, expires_at, current_station')
       .eq('production_id', productionId)
       .eq('kitchen_user_id', session.userId)
       .gt('quantity', 0)
@@ -48,9 +48,10 @@ export async function getActiveLots(
     if (remaining <= 0) continue
     lots.push({
       log_id: l.id as string,
-      batch_number: l.batch_number as number,
+      batch_number: l.batch_number as string,
       quantity: remaining,
       expires_at: l.expires_at as string,
+      current_station: (l.current_station as ActiveLot['current_station']) ?? null,
     })
   }
 

@@ -3,13 +3,14 @@
 import { useState } from 'react'
 import { ProductionButton } from './ProductionButton'
 import { SalePanel } from './SalePanel'
+import { MovePanel } from './MovePanel'
 import { EditPrepModal } from './EditPrepModal'
 import { type StockActualHoy, type ActiveLot } from '@/types/database'
 import { truncUnit } from '@/lib/format'
 import { ShelfLifeInfo } from '@/components/ShelfLifeInfo'
 import { LotList } from '@/components/LotList'
 
-type OpenMode = 'production' | 'sale' | null
+type OpenMode = 'production' | 'sale' | 'move' | null
 
 export function PrepCard({ item, initialLots, expiredLots, openMode, onSetMode, onStockDelta }: {
   item: StockActualHoy
@@ -27,7 +28,7 @@ export function PrepCard({ item, initialLots, expiredLots, openMode, onSetMode, 
       {editing && <EditPrepModal item={item} onClose={() => setEditing(false)} />}
       <div className="mb-4 flex flex-wrap items-center gap-1.5">
         <span className="text-lg font-semibold text-gray-900 leading-tight">{item.name}</span>
-        {item.shelf_life_hours != null && <ShelfLifeInfo hours={item.shelf_life_hours} onEdit={() => setEditing(true)} align="right" />}
+        <ShelfLifeInfo hours={item.shelf_life_hours} onEdit={() => setEditing(true)} align="right" />
       </div>
       <div className="mb-4">
         {(() => {
@@ -75,24 +76,37 @@ export function PrepCard({ item, initialLots, expiredLots, openMode, onSetMode, 
       </div>
 
       {openMode === null && (
-        <div className="flex gap-2">
+        <div className="flex flex-col gap-2">
           <button
             onClick={() => onSetMode('production')}
-            className="flex-1 h-14 rounded-xl border border-blue-600 text-blue-600 text-base font-semibold hover:bg-blue-50 transition-colors"
+            className="w-full h-14 rounded-xl border border-green-600 text-green-600 text-base font-semibold hover:bg-green-50 transition-colors"
           >
             + Produir
           </button>
-          <button
-            onClick={() => onSetMode('sale')}
-            disabled={item.stock_total <= 0}
-            className={`flex-1 h-14 rounded-xl border text-base font-semibold transition-colors ${
-              item.stock_total <= 0
-                ? 'border-gray-200 text-gray-300 cursor-not-allowed'
-                : 'border-red-600 text-red-600 hover:bg-red-50'
-            }`}
-          >
-            - Sale
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => onSetMode('sale')}
+              disabled={item.stock_total <= 0 && expiredLots.length === 0}
+              className={`flex-1 h-14 rounded-xl border text-base font-semibold transition-colors ${
+                item.stock_total <= 0 && expiredLots.length === 0
+                  ? 'border-gray-200 text-gray-300 cursor-not-allowed'
+                  : 'border-red-600 text-red-600 hover:bg-red-50'
+              }`}
+            >
+              - Surt
+            </button>
+            <button
+              onClick={() => onSetMode('move')}
+              disabled={item.stock_total <= 0 && expiredLots.length === 0}
+              className={`flex-1 h-14 rounded-xl border text-base font-semibold transition-colors ${
+                item.stock_total <= 0 && expiredLots.length === 0
+                  ? 'border-gray-200 text-gray-300 cursor-not-allowed'
+                  : 'border-blue-600 text-blue-600 hover:bg-blue-50'
+              }`}
+            >
+              Moure
+            </button>
+          </div>
         </div>
       )}
 
@@ -128,6 +142,27 @@ export function PrepCard({ item, initialLots, expiredLots, openMode, onSetMode, 
             onClose={() => onSetMode(null)}
             onSuccess={(qty) => onStockDelta(-qty)}
             onManualMode={(on) => { if (on) setShowLots(false) }}
+          />
+          <button
+            onClick={() => onSetMode(null)}
+            className="h-14 rounded-xl bg-gray-100 text-gray-700 text-base font-semibold hover:bg-gray-200"
+          >
+            Anul·lar
+          </button>
+        </div>
+      )}
+
+      {openMode === 'move' && (
+        <div className="flex flex-col gap-2">
+          <MovePanel
+            productionId={item.production_id}
+            name={item.name}
+            unit={item.unit}
+            station={item.station}
+            initialLots={initialLots}
+            expiredLots={expiredLots}
+            onClose={() => onSetMode(null)}
+            onSuccess={() => onSetMode(null)}
           />
           <button
             onClick={() => onSetMode(null)}

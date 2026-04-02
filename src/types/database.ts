@@ -1,16 +1,17 @@
 export type Station = 'Partida' | 'Congelador' | 'Camara' | 'Timbre'
 export type SaleReason = 'merma' | 'venta'
-export type ExitReason = 'caducitat' | 'mal_estat' | 'error_produccio' | 'accident' | 'altre'
+export type ExitReason = 'accident' | 'mal_estat' | 'altre'
 
 export interface ActiveLot {
   log_id: string
-  batch_number: number
+  batch_number: string
   quantity: number
-  expires_at: string
+  expires_at: string | null
+  current_station: Station | null
 }
 
 export interface FifoBreakdown {
-  batch_number: number
+  batch_number: string
   quantity: number
 }
 
@@ -23,6 +24,8 @@ export interface Production {
   active: boolean
   kitchen_user_id: string
   created_at: string
+  recipe: string | null
+  recipe_photos: string[]
 }
 
 export interface ProductionLog {
@@ -31,7 +34,7 @@ export interface ProductionLog {
   quantity: number
   expires_at: string | null
   logged_at: string
-  batch_number: number | null
+  batch_number: string | null
   kitchen_user_id: string
 }
 
@@ -58,7 +61,7 @@ export interface StockExit {
 
 export interface StockExitLot {
   exit_id: string
-  batch_number: number
+  batch_number: string
   quantity: number
   kitchen_user_id: string
 }
@@ -72,6 +75,6 @@ export interface ProductionJoin {
 }
 
 export interface ExitLotJoin {
-  batch_number: number
+  batch_number: string
   quantity: number
 }

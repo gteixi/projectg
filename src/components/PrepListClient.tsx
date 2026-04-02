@@ -21,7 +21,7 @@ const STATION_THEMES: Record<Station, StationTheme> = {
   Timbre:    { accentBorder: 'border-l-pink-500',   accentText: 'text-pink-700',   accentBg: 'bg-pink-50' },
 }
 
-type OpenMode = 'production' | 'sale'
+type OpenMode = 'production' | 'sale' | 'move'
 type ActiveItem = { id: string; mode: OpenMode } | null
 type StockDelta = { productionId: string; delta: number }
 
@@ -67,7 +67,7 @@ function StationCard({ station, items, lotsByProduction, expiredLotsByProduction
             <tr className="border-b border-[#e5e3de]">
               <th className="py-3 pr-6 text-left text-sm font-semibold uppercase tracking-wider text-gray-400">Producció</th>
               <th className="py-3 px-4 text-right text-sm font-semibold uppercase tracking-wider text-gray-400">Stock</th>
-              <th className="py-3 pl-3 text-center text-sm font-semibold uppercase tracking-wider text-gray-400 w-[280px]">Registrar</th>
+              <th className="py-3 pl-3 text-center text-sm font-semibold uppercase tracking-wider text-gray-400 w-[380px]">Registrar</th>
             </tr>
           </thead>
           <tbody>

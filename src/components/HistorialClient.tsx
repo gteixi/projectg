@@ -35,24 +35,20 @@ export type DaySummary = {
   items: DayItem[]
 }
 
-function itemMatchesQuery(item: DayItem, q: string, isNumeric: boolean): boolean {
+function itemMatchesQuery(item: DayItem, q: string): boolean {
   if (item.kind === 'prep') {
-    if (isNumeric) {
-      return item.data.entries.some((e) => e.lot_number?.toString() === q)
-    }
-    return normalize(item.data.name).includes(q)
+    return item.data.entries.some((e) => e.lot_number && normalize(e.lot_number).includes(q)) ||
+      normalize(item.data.name).includes(q)
   }
-  if (isNumeric) {
-    return item.data.lots.some((l) => l.batch_number.toString() === q)
-  }
-  return normalize(item.data.name).includes(q)
+  return item.data.lots.some((l) => normalize(l.batch_number).includes(q)) ||
+    normalize(item.data.name).includes(q)
 }
 
 function itemHasLotMatch(item: DayItem, q: string): boolean {
   if (item.kind === 'prep') {
-    return item.data.entries.some((e) => e.lot_number?.toString() === q)
+    return item.data.entries.some((e) => e.lot_number && normalize(e.lot_number).includes(q))
   }
-  return item.data.lots.some((l) => l.batch_number.toString() === q)
+  return item.data.lots.some((l) => normalize(l.batch_number).includes(q))
 }
 
 const normalize = (s: string): string =>
@@ -62,17 +58,17 @@ export function HistorialClient({ days }: { days: DaySummary[] }): React.JSX.Ele
   const [query, setQuery] = useState('')
 
   const q = normalize(query.trim())
-  const isNumeric = /^\d+$/.test(q)
+  const isLotQuery = /^[a-z0-9]+$/i.test(query.trim()) && query.trim().length <= 5
 
   const filtered = useMemo(() => {
     if (!q) return days
     return days
       .map((day) => ({
         ...day,
-        items: day.items.filter((item) => itemMatchesQuery(item, q, isNumeric)),
+        items: day.items.filter((item) => itemMatchesQuery(item, q)),
       }))
       .filter((day) => day.items.length > 0)
-  }, [days, q, isNumeric])
+  }, [days, q])
 
   return (
     <>
@@ -108,7 +104,7 @@ export function HistorialClient({ days }: { days: DaySummary[] }): React.JSX.Ele
                         unit={item.data.unit}
                         lot_count={item.data.lot_count}
                         entries={item.data.entries}
-                        defaultOpen={isNumeric && q !== '' && itemHasLotMatch(item, q)}
+                        defaultOpen={isLotQuery && q !== '' && itemHasLotMatch(item, q)}
                       />
                     ) : (
                       <HistorialSaleRow
@@ -119,7 +115,7 @@ export function HistorialClient({ days }: { days: DaySummary[] }): React.JSX.Ele
                         reason={item.data.reason}
                         exitReason={item.data.exitReason}
                         lots={item.data.lots}
-                        defaultOpen={isNumeric && q !== '' && itemHasLotMatch(item, q)}
+                        defaultOpen={isLotQuery && q !== '' && itemHasLotMatch(item, q)}
                       />
                     )
                   )}

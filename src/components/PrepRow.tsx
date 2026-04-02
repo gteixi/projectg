@@ -3,13 +3,14 @@
 import { useState } from 'react'
 import { ProductionButton } from './ProductionButton'
 import { SalePanel } from './SalePanel'
+import { MovePanel } from './MovePanel'
 import { EditPrepModal } from './EditPrepModal'
 import { type StockActualHoy, type ActiveLot } from '@/types/database'
 import { truncUnit } from '@/lib/format'
 import { ShelfLifeInfo } from '@/components/ShelfLifeInfo'
 import { LotList } from '@/components/LotList'
 
-type OpenMode = 'production' | 'sale' | null
+type OpenMode = 'production' | 'sale' | 'move' | null
 
 export function PrepRow({ item, initialLots, expiredLots, openMode, onSetMode, onStockDelta }: {
   item: StockActualHoy
@@ -22,7 +23,7 @@ export function PrepRow({ item, initialLots, expiredLots, openMode, onSetMode, o
   const [editing, setEditing] = useState(false)
   const [showLots, setShowLots] = useState(false)
 
-  function toggle(mode: 'production' | 'sale'): void {
+  function toggle(mode: 'production' | 'sale' | 'move'): void {
     onSetMode(openMode === mode ? null : mode)
   }
 
@@ -34,7 +35,7 @@ export function PrepRow({ item, initialLots, expiredLots, openMode, onSetMode, o
           <div className="flex items-center gap-2">
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="text-lg font-semibold text-gray-900 leading-tight">{item.name}</span>
-              {item.shelf_life_hours != null && <ShelfLifeInfo hours={item.shelf_life_hours} onEdit={() => setEditing(true)} />}
+              <ShelfLifeInfo hours={item.shelf_life_hours} onEdit={() => setEditing(true)} />
             </div>
           </div>
         </td>
@@ -76,30 +77,43 @@ export function PrepRow({ item, initialLots, expiredLots, openMode, onSetMode, o
             )
           })()}
         </td>
-        <td className="py-5 pl-3 align-middle w-[320px]">
+        <td className="py-5 pl-3 align-middle w-[380px]">
           <div className="flex justify-center gap-2">
             <button
               onClick={() => toggle('production')}
-              className={`h-14 px-5 rounded-xl border text-base font-semibold transition-colors ${
+              className={`h-14 px-4 rounded-xl border text-base font-semibold transition-colors ${
                 openMode === 'production'
                   ? 'bg-red-600 border-red-600 text-white hover:bg-red-700'
-                  : 'border-blue-600 text-blue-600 hover:bg-blue-50'
+                  : 'border-green-600 text-green-600 hover:bg-green-50'
               }`}
             >
               {openMode === 'production' ? 'Anul\u00b7lar' : '+ Produir'}
             </button>
             <button
               onClick={() => toggle('sale')}
-              disabled={item.stock_total <= 0}
-              className={`h-14 px-5 rounded-xl border text-base font-semibold transition-colors ${
-                item.stock_total <= 0
+              disabled={item.stock_total <= 0 && expiredLots.length === 0}
+              className={`h-14 px-4 rounded-xl border text-base font-semibold transition-colors ${
+                item.stock_total <= 0 && expiredLots.length === 0
                   ? 'border-gray-200 text-gray-300 cursor-not-allowed'
                   : openMode === 'sale'
                     ? 'bg-red-600 border-red-600 text-white hover:bg-red-700'
                     : 'border-red-600 text-red-600 hover:bg-red-50'
               }`}
             >
-              {openMode === 'sale' ? 'Anul\u00b7lar' : '- Sale'}
+              {openMode === 'sale' ? 'Anul\u00b7lar' : '- Surt'}
+            </button>
+            <button
+              onClick={() => toggle('move')}
+              disabled={item.stock_total <= 0 && expiredLots.length === 0}
+              className={`h-14 px-4 rounded-xl border text-base font-semibold transition-colors ${
+                item.stock_total <= 0 && expiredLots.length === 0
+                  ? 'border-gray-200 text-gray-300 cursor-not-allowed'
+                  : openMode === 'move'
+                    ? 'bg-red-600 border-red-600 text-white hover:bg-red-700'
+                    : 'border-blue-600 text-blue-600 hover:bg-blue-50'
+              }`}
+            >
+              {openMode === 'move' ? 'Anul\u00b7lar' : 'Moure'}
             </button>
           </div>
         </td>
@@ -112,7 +126,7 @@ export function PrepRow({ item, initialLots, expiredLots, openMode, onSetMode, o
         </tr>
       )}
       {openMode && (
-        <tr className={`border-b border-[#e5e3de] last:border-0 ${openMode === 'sale' ? 'bg-red-50/50' : 'bg-blue-50/50'}`}>
+        <tr className={`border-b border-[#e5e3de] last:border-0 ${openMode === 'sale' ? 'bg-red-50/50' : openMode === 'move' ? 'bg-blue-50/30' : 'bg-green-50/50'}`}>
           <td colSpan={3} className="px-6 py-4">
             {openMode === 'sale' ? (
               <SalePanel
@@ -125,6 +139,17 @@ export function PrepRow({ item, initialLots, expiredLots, openMode, onSetMode, o
                 onClose={() => onSetMode(null)}
                 onSuccess={(qty) => onStockDelta(-qty)}
                 onManualMode={(on) => { if (on) setShowLots(false) }}
+              />
+            ) : openMode === 'move' ? (
+              <MovePanel
+                productionId={item.production_id}
+                name={item.name}
+                unit={item.unit}
+                station={item.station}
+                initialLots={initialLots}
+                expiredLots={expiredLots}
+                onClose={() => onSetMode(null)}
+                onSuccess={() => onSetMode(null)}
               />
             ) : (
               <ProductionButton

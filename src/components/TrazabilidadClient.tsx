@@ -58,11 +58,10 @@ export function TrazabilidadClient({ allResults }: Props): React.JSX.Element {
 
   const filtered = useMemo(() => {
     const q = normalize(query.trim())
-    const isNumeric = /^\d+$/.test(q)
     const base = q
       ? allResults.filter(
           (r) =>
-            (isNumeric ? r.lot_number?.toString() === q : false) ||
+            (r.lot_number && normalize(r.lot_number).includes(q)) ||
             normalize(r.preparation_name).includes(q)
         )
       : allResults
@@ -74,7 +73,7 @@ export function TrazabilidadClient({ allResults }: Props): React.JSX.Element {
       } else if (sortKey === 'caducitat') {
         cmp = (a.expires_at ?? '').localeCompare(b.expires_at ?? '')
       } else {
-        cmp = (a.lot_number ?? 0) - (b.lot_number ?? 0)
+        cmp = (a.lot_number ?? '').localeCompare(b.lot_number ?? '')
       }
       return sortDir === 'desc' ? -cmp : cmp
     })
@@ -107,7 +106,10 @@ export function TrazabilidadClient({ allResults }: Props): React.JSX.Element {
       ) : (
         <>
           <div className="flex flex-col gap-2">
-            {paginated.map((r) => <LoteCard key={r.id} lot={r} />)}
+            {paginated.map((r) => {
+              const expired = r.expires_at ? new Date(r.expires_at) < new Date() : false
+              return <LoteCard key={r.id} lot={r} showExtend={expired} />
+            })}
           </div>
 
           {totalPages > 1 && (

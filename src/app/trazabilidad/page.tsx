@@ -47,7 +47,7 @@ export default async function TrazabilidadPage(): Promise<React.JSX.Element> {
     allResults.push({
       id: log.id as string,
       production_id: log.production_id as string,
-      lot_number: (log.batch_number as number) ?? null,
+      lot_number: (log.batch_number as string) ?? null,
       preparation_name: prep?.name ?? 'Desconeguda',
       unit: prep?.unit ?? '',
       quantity: remaining,

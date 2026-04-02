@@ -10,6 +10,8 @@ interface PrepData {
   unit: string
   shelf_life_hours: number | null
   station: Station
+  recipe?: string | null
+  recipe_photos?: string[]
 }
 
 export async function createPreparation(data: PrepData): Promise<ActionResult> {

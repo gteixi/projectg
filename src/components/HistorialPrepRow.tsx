@@ -3,7 +3,7 @@
 import { useState } from 'react'
 
 export type LogDetail = {
-  lot_number: number | null
+  lot_number: string | null
   quantity: number
   unit: string
   time: string

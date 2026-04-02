@@ -1,12 +1,17 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { updatePreparation, deactivatePreparation } from '@/lib/prep-actions'
 import { suggestShelfLife } from '@/lib/ai-actions'
+import { uploadRecipePhoto, deleteRecipePhoto, getRecipePhotoUrl } from '@/lib/photo-actions'
+import { compressImage } from '@/lib/image-utils'
+import { createClient } from '@/lib/supabase-browser'
 import { type Station, type StockActualHoy } from '@/types/database'
 import { STATIONS, UNITS, type Unit, MIN_PREP_NAME_LENGTH } from '@/lib/constants'
+
+const MAX_PHOTOS = 5
 
 interface Props {
   item: StockActualHoy
@@ -21,6 +26,10 @@ export function EditPrepModal({ item, onClose }: Props): React.JSX.Element {
   const [shelfValue, setShelfValue] = useState(initialHours !== null ? String(initialIsDays ? initialHours / 24 : initialHours) : '')
   const [shelfUnit, setShelfUnit] = useState<'hours' | 'days'>(initialIsDays ? 'days' : 'hours')
   const [station, setStation] = useState<Station>(item.station)
+  const [recipe, setRecipe] = useState('')
+  const [photos, setPhotos] = useState<string[]>([])
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [serverError, setServerError] = useState<string | null>(null)
   const [suggesting, setSuggesting] = useState(false)
@@ -28,6 +37,51 @@ export function EditPrepModal({ item, onClose }: Props): React.JSX.Element {
   const [confirmDeactivate, setConfirmDeactivate] = useState(false)
   const [pending, startTransition] = useTransition()
   const router = useRouter()
+
+  useEffect(() => {
+    const supabase = createClient()
+    supabase
+      .from('productions')
+      .select('recipe, recipe_photos')
+      .eq('id', item.production_id)
+      .single()
+      .then(({ data }) => {
+        if (data) {
+          setRecipe(data.recipe ?? '')
+          setPhotos(data.recipe_photos ?? [])
+        }
+      })
+  }, [item.production_id])
+
+  async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>): Promise<void> {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+    const remaining = MAX_PHOTOS - photos.length
+    if (remaining <= 0) return
+    setUploading(true)
+    setServerError(null)
+    const filesToUpload = Array.from(files).slice(0, remaining)
+    for (const file of filesToUpload) {
+      const compressed = await compressImage(file)
+      const fd = new FormData()
+      fd.append('file', compressed, 'photo.jpg')
+      const result = await uploadRecipePhoto(fd)
+      if (result.error) {
+        setServerError(result.error)
+        break
+      }
+      if (result.path) {
+        setPhotos((prev) => [...prev, result.path!])
+      }
+    }
+    setUploading(false)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  async function handlePhotoRemove(path: string): Promise<void> {
+    await deleteRecipePhoto(path)
+    setPhotos((prev) => prev.filter((p) => p !== path))
+  }
 
   async function handleSuggest(): Promise<void> {
     if (name.trim().length < 2) return
@@ -73,6 +127,8 @@ export function EditPrepModal({ item, onClose }: Props): React.JSX.Element {
         unit,
         shelf_life_hours: shelfHours,
         station,
+        recipe: recipe.trim() || null,
+        recipe_photos: photos,
       })
       if (result.error) {
         setServerError(result.error)
@@ -113,8 +169,8 @@ export function EditPrepModal({ item, onClose }: Props): React.JSX.Element {
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
       onClick={(e) => e.stopPropagation()}
     >
-      <div className="bg-white rounded-2xl w-full max-w-md flex flex-col overflow-hidden">
-        <div className="px-6 pt-6 pb-2 flex items-center justify-between">
+      <div className="bg-white rounded-2xl w-full max-w-md flex flex-col overflow-hidden max-h-[90vh]">
+        <div className="px-6 pt-6 pb-2 flex items-center justify-between shrink-0">
           <h2 className="text-xl font-bold text-gray-900">Editar producció</h2>
           <button
             onClick={handleClose}
@@ -125,7 +181,7 @@ export function EditPrepModal({ item, onClose }: Props): React.JSX.Element {
           </button>
         </div>
 
-        <div className="px-6 py-4 flex flex-col gap-4">
+        <div className="px-6 py-4 flex flex-col gap-4 overflow-y-auto">
           <div>
             <label className={labelCls}>Nom</label>
             <input
@@ -212,10 +268,66 @@ export function EditPrepModal({ item, onClose }: Props): React.JSX.Element {
             {errors.shelf_life_value && <p className="text-sm text-red-600 mt-1.5">{errors.shelf_life_value}</p>}
           </div>
 
+          <div>
+            <label className={labelCls}>Recepta <span className="text-gray-400 font-normal">— opcional</span></label>
+            <textarea
+              value={recipe}
+              onChange={(e) => setRecipe(e.target.value)}
+              disabled={pending}
+              placeholder="Escriu la recepta o instruccions..."
+              rows={3}
+              className="border border-[#e5e3de] rounded-xl px-4 py-3 text-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50 w-full resize-none"
+            />
+          </div>
+
+          <div>
+            <label className={labelCls}>Fotos <span className="text-gray-400 font-normal">— opcional, màx {MAX_PHOTOS}</span></label>
+            {photos.length > 0 && (
+              <div className="flex gap-2 flex-wrap mb-2">
+                {photos.map((path) => (
+                  <div key={path} className="relative w-20 h-20 rounded-xl overflow-hidden border border-[#e5e3de]">
+                    <img src={getRecipePhotoUrl(path)} alt="" className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => handlePhotoRemove(path)}
+                      disabled={pending}
+                      className="absolute top-0.5 right-0.5 w-6 h-6 rounded-full bg-black/60 text-white text-xs flex items-center justify-center hover:bg-black/80"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {photos.length < MAX_PHOTOS && (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={pending || uploading}
+                className="h-12 px-4 rounded-xl border-2 border-dashed border-[#e5e3de] text-gray-500 text-base font-medium hover:border-gray-400 hover:text-gray-700 disabled:opacity-50 flex items-center gap-2 w-full justify-center"
+              >
+                {uploading ? (
+                  <span className="inline-block w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" /></svg>
+                )}
+                {uploading ? 'Pujant...' : 'Afegir fotos'}
+              </button>
+            )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handlePhotoUpload}
+              className="hidden"
+            />
+          </div>
+
           {serverError && <p className="text-base text-red-600">{serverError}</p>}
         </div>
 
-        <div className="px-6 pb-4 pt-2 flex flex-col gap-3">
+        <div className="px-6 pb-4 pt-2 flex flex-col gap-3 shrink-0">
           <div className="flex gap-3">
             <button
               onClick={handleClose}

@@ -6,7 +6,7 @@ import { NewProductionButton } from '@/components/NewProductionButton'
 import { type StockActualHoy, type ActiveLot } from '@/types/database'
 
 const STOCK_COLUMNS = 'production_id, name, unit, shelf_life_hours, station, stock_total, next_expiry' as const
-const LOTS_COLUMNS = 'id, production_id, batch_number, quantity, expires_at' as const
+const LOTS_COLUMNS = 'id, production_id, batch_number, quantity, expires_at, current_station' as const
 
 export default async function Home(): Promise<React.JSX.Element> {
   const session = await requireAuth()
@@ -25,10 +25,9 @@ export default async function Home(): Promise<React.JSX.Element> {
       .select(LOTS_COLUMNS)
       .eq('kitchen_user_id', session.userId)
       .gt('quantity', 0)
-      .not('expires_at', 'is', null)
-      .gt('expires_at', nowIso)
+      .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
       .not('batch_number', 'is', null)
-      .order('expires_at', { ascending: true }),
+      .order('expires_at', { ascending: true, nullsFirst: false }),
     supabase
       .from('production_logs')
       .select(LOTS_COLUMNS)
@@ -67,9 +66,10 @@ export default async function Home(): Promise<React.JSX.Element> {
       if (!map[pid]) map[pid] = []
       map[pid].push({
         log_id: l.id as string,
-        batch_number: l.batch_number as number,
+        batch_number: l.batch_number as string,
         quantity: remaining,
         expires_at: l.expires_at as string,
+        current_station: (l.current_station as ActiveLot['current_station']) ?? null,
       })
     }
     return map

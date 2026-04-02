@@ -27,7 +27,7 @@ export function SalePanel({ productionId, name, unit, stock, initialLots, expire
   const [step, setStep] = useState<'input' | 'confirm'>('input')
   const [quantity, setQuantity] = useState('')
   const [reason, setReason] = useState<SaleReason>('merma')
-  const [exitReason, setExitReason] = useState<ExitReason>('caducitat')
+  const [exitReason, setExitReason] = useState<ExitReason>('accident')
   const [activeLots, setActiveLots] = useState<ActiveLot[]>(initialLots ?? [])
   const [lotsLoading, setLotsLoading] = useState(!initialLots)
   const [lotsError, setLotsError] = useState<string | null>(null)
@@ -39,7 +39,7 @@ export function SalePanel({ productionId, name, unit, stock, initialLots, expire
   const [serverError, setServerError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
   const [manualMode, setManualMode] = useState(false)
-  const [manualQty, setManualQty] = useState<Record<number, string>>({})
+  const [manualQty, setManualQty] = useState<Record<string, string>>({})
 
   useEffect(() => {
     if (initialLots) return
@@ -57,7 +57,7 @@ export function SalePanel({ productionId, name, unit, stock, initialLots, expire
     if (enabled) {
       const qty = parseFloat(quantity)
       const fifo = isNaN(qty) || qty <= 0 ? [] : computeFifo(lots, Math.min(qty, lots.reduce((s, l) => s + l.quantity, 0)))
-      const init: Record<number, string> = {}
+      const init: Record<string, string> = {}
       for (const lot of lots) {
         const suggestion = fifo.find((f) => f.batch_number === lot.batch_number)
         init[lot.batch_number] = suggestion ? String(suggestion.quantity) : '0'

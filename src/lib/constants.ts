@@ -13,18 +13,14 @@ export const REASON_LABELS: Record<SaleReason, string> = {
 }
 
 export const EXIT_REASONS: { value: ExitReason; label: string }[] = [
-  { value: 'caducitat', label: 'Caducitat' },
-  { value: 'mal_estat', label: 'Mal estat' },
-  { value: 'error_produccio', label: 'Error prod.' },
   { value: 'accident', label: 'Accident' },
+  { value: 'mal_estat', label: 'Mal estat' },
   { value: 'altre', label: 'Altre' },
 ]
 
 export const EXIT_REASON_LABELS: Record<ExitReason, string> = {
-  caducitat: 'Caducitat',
-  mal_estat: 'Mal estat',
-  error_produccio: 'Error producció',
   accident: 'Accident',
+  mal_estat: 'Mal estat',
   altre: 'Altre',
 }
 

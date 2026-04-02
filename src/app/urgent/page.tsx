@@ -114,7 +114,7 @@ export default async function UrgentPage(): Promise<React.JSX.Element> {
                   <h2 className="text-sm font-semibold uppercase tracking-wider text-red-600 mb-3">Caducats</h2>
                   {criticalDays.length === 1 ? (
                     <div className="flex flex-col gap-2">
-                      {criticalDays[0].lots.map((lot) => <LoteCard key={lot.id} lot={lot} variant="critical" showSale />)}
+                      {criticalDays[0].lots.map((lot) => <LoteCard key={lot.id} lot={lot} variant="critical" showSale showExtend showMove />)}
                     </div>
                   ) : (
                     <div className="flex flex-col gap-3">
@@ -130,7 +130,7 @@ export default async function UrgentPage(): Promise<React.JSX.Element> {
                             </svg>
                           </summary>
                           <div className="flex flex-col gap-2 mt-2">
-                            {group.lots.map((lot) => <LoteCard key={lot.id} lot={lot} variant="critical" showSale />)}
+                            {group.lots.map((lot) => <LoteCard key={lot.id} lot={lot} variant="critical" showSale showExtend showMove />)}
                           </div>
                         </details>
                       ))}
@@ -142,7 +142,7 @@ export default async function UrgentPage(): Promise<React.JSX.Element> {
                 <section>
                   <h2 className="text-sm font-semibold uppercase tracking-wider text-yellow-600 mb-3">Caduca avui</h2>
                   <div className="flex flex-col gap-2">
-                    {warning.map((lot) => <LoteCard key={lot.id} lot={lot} variant="warning" showSale />)}
+                    {warning.map((lot) => <LoteCard key={lot.id} lot={lot} variant="warning" showSale showMove />)}
                   </div>
                 </section>
               )}
@@ -150,7 +150,7 @@ export default async function UrgentPage(): Promise<React.JSX.Element> {
                 <section>
                   <h2 className="text-sm font-semibold uppercase tracking-wider text-blue-500 mb-3">Caduca demà</h2>
                   <div className="flex flex-col gap-2">
-                    {tomorrow.map((lot) => <LoteCard key={lot.id} lot={lot} variant="tomorrow" showSale />)}
+                    {tomorrow.map((lot) => <LoteCard key={lot.id} lot={lot} variant="tomorrow" showSale showMove />)}
                   </div>
                 </section>
               )}

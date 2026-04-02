@@ -68,7 +68,7 @@ export function DemandaTable({ rows }: { rows: DemandaRow[] }): React.JSX.Elemen
       <ul className="divide-y divide-[#e5e3de] md:hidden">
         {sorted.map((r) => (
           <li key={r.production_id} className="px-4 py-3">
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center justify-between mb-2">
               <span className="font-medium text-gray-900">{r.name}</span>
               <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${STATION_COLORS[r.station]}`}>
                 {r.station}

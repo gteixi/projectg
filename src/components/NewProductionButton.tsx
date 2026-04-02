@@ -1,12 +1,16 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { createPreparation } from '@/lib/prep-actions'
 import { suggestShelfLife } from '@/lib/ai-actions'
+import { uploadRecipePhoto, deleteRecipePhoto, getRecipePhotoUrl } from '@/lib/photo-actions'
+import { compressImage } from '@/lib/image-utils'
 import { type Station } from '@/types/database'
 import { STATIONS, UNITS, type Unit, MIN_PREP_NAME_LENGTH } from '@/lib/constants'
+
+const MAX_PHOTOS = 5
 
 type ShelfUnit = 'hours' | 'days'
 
@@ -16,10 +20,11 @@ interface FormState {
   shelf_life_value: string
   shelf_unit: ShelfUnit
   station: Station
+  recipe: string
 }
 
 function emptyForm(): FormState {
-  return { name: '', unit: 'kg', shelf_life_value: '', shelf_unit: 'hours', station: 'Partida' }
+  return { name: '', unit: 'kg', shelf_life_value: '', shelf_unit: 'hours', station: 'Partida', recipe: '' }
 }
 
 export function NewProductionButton() {
@@ -27,6 +32,9 @@ export function NewProductionButton() {
   const [form, setForm] = useState<FormState>(emptyForm())
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [serverError, setServerError] = useState<string | null>(null)
+  const [photos, setPhotos] = useState<string[]>([])
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [suggesting, setSuggesting] = useState(false)
   const [suggestionReason, setSuggestionReason] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
@@ -35,6 +43,18 @@ export function NewProductionButton() {
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }))
     setErrors((prev) => { const e = { ...prev }; delete e[key]; return e })
+  }
+
+  function switchShelfUnit(newUnit: 'hours' | 'days') {
+    if (newUnit === form.shelf_unit) return
+    const raw = parseFloat(form.shelf_life_value)
+    if (!isNaN(raw) && raw > 0) {
+      const converted = newUnit === 'hours' ? raw * 24 : raw / 24
+      const display = Number.isInteger(converted) ? String(converted) : converted.toFixed(1)
+      setForm((prev) => ({ ...prev, shelf_unit: newUnit, shelf_life_value: display }))
+    } else {
+      set('shelf_unit', newUnit)
+    }
   }
 
   async function handleSuggest() {
@@ -59,8 +79,39 @@ export function NewProductionButton() {
     }
   }
 
+  async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+    const remaining = MAX_PHOTOS - photos.length
+    if (remaining <= 0) return
+    setUploading(true)
+    setServerError(null)
+    const filesToUpload = Array.from(files).slice(0, remaining)
+    for (const file of filesToUpload) {
+      const compressed = await compressImage(file)
+      const fd = new FormData()
+      fd.append('file', compressed, 'photo.jpg')
+      const result = await uploadRecipePhoto(fd)
+      if (result.error) {
+        setServerError(result.error)
+        break
+      }
+      if (result.path) {
+        setPhotos((prev) => [...prev, result.path!])
+      }
+    }
+    setUploading(false)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  async function handlePhotoRemove(path: string) {
+    await deleteRecipePhoto(path)
+    setPhotos((prev) => prev.filter((p) => p !== path))
+  }
+
   function handleOpen() {
     setForm(emptyForm())
+    setPhotos([])
     setErrors({})
     setServerError(null)
     setSuggestionReason(null)
@@ -89,6 +140,8 @@ export function NewProductionButton() {
         unit: form.unit,
         shelf_life_hours: shelfHours,
         station: form.station,
+        recipe: form.recipe.trim() || null,
+        recipe_photos: photos,
       })
       if (result.error) {
         setServerError(result.error)
@@ -111,8 +164,8 @@ export function NewProductionButton() {
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
       onClick={(e) => e.stopPropagation()}
     >
-      <div className="bg-white rounded-2xl w-full max-w-md flex flex-col overflow-hidden">
-        <div className="px-6 pt-6 pb-2 flex items-center justify-between">
+      <div className="bg-white rounded-2xl w-full max-w-md flex flex-col overflow-hidden max-h-[90vh]">
+        <div className="px-6 pt-6 pb-2 flex items-center justify-between shrink-0">
           <h2 className="text-xl font-bold text-gray-900">Nova producció</h2>
           <button
             onClick={handleClose}
@@ -123,7 +176,7 @@ export function NewProductionButton() {
           </button>
         </div>
 
-        <div className="px-6 py-4 flex flex-col gap-4">
+        <div className="px-6 py-4 flex flex-col gap-4 overflow-y-auto">
           <div>
             <label className={labelCls}>Nom</label>
             <input
@@ -193,7 +246,7 @@ export function NewProductionButton() {
               <div className="flex h-14 rounded-xl border border-[#e5e3de] bg-white overflow-hidden shrink-0">
                 <button
                   type="button"
-                  onClick={() => set('shelf_unit', 'hours')}
+                  onClick={() => switchShelfUnit('hours')}
                   disabled={pending}
                   className={`px-4 text-base font-semibold transition-colors ${form.shelf_unit === 'hours' ? 'bg-gray-900 text-white' : 'text-gray-500 hover:bg-gray-100'}`}
                 >
@@ -201,7 +254,7 @@ export function NewProductionButton() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => set('shelf_unit', 'days')}
+                  onClick={() => switchShelfUnit('days')}
                   disabled={pending}
                   className={`px-4 text-base font-semibold transition-colors ${form.shelf_unit === 'days' ? 'bg-gray-900 text-white' : 'text-gray-500 hover:bg-gray-100'}`}
                 >
@@ -210,6 +263,62 @@ export function NewProductionButton() {
               </div>
             </div>
             {errors.shelf_life_value && <p className="text-sm text-red-600 mt-1.5">{errors.shelf_life_value}</p>}
+          </div>
+
+          <div>
+            <label className={labelCls}>Recepta <span className="text-gray-400 font-normal">— opcional</span></label>
+            <textarea
+              value={form.recipe}
+              onChange={(e) => set('recipe', e.target.value)}
+              disabled={pending}
+              placeholder="Escriu la recepta o instruccions..."
+              rows={3}
+              className="border border-[#e5e3de] rounded-xl px-4 py-3 text-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50 w-full resize-none"
+            />
+          </div>
+
+          <div>
+            <label className={labelCls}>Fotos <span className="text-gray-400 font-normal">— opcional, màx {MAX_PHOTOS}</span></label>
+            {photos.length > 0 && (
+              <div className="flex gap-2 flex-wrap mb-2">
+                {photos.map((path) => (
+                  <div key={path} className="relative w-20 h-20 rounded-xl overflow-hidden border border-[#e5e3de]">
+                    <img src={getRecipePhotoUrl(path)} alt="" className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => handlePhotoRemove(path)}
+                      disabled={pending}
+                      className="absolute top-0.5 right-0.5 w-6 h-6 rounded-full bg-black/60 text-white text-xs flex items-center justify-center hover:bg-black/80"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {photos.length < MAX_PHOTOS && (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={pending || uploading}
+                className="h-12 px-4 rounded-xl border-2 border-dashed border-[#e5e3de] text-gray-500 text-base font-medium hover:border-gray-400 hover:text-gray-700 disabled:opacity-50 flex items-center gap-2 w-full justify-center"
+              >
+                {uploading ? (
+                  <span className="inline-block w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" /></svg>
+                )}
+                {uploading ? 'Pujant...' : 'Afegir fotos'}
+              </button>
+            )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handlePhotoUpload}
+              className="hidden"
+            />
           </div>
 
           {serverError && <p className="text-base text-red-600">{serverError}</p>}

@@ -2,11 +2,14 @@
 
 import { useState, useTransition } from 'react'
 import { createPortal } from 'react-dom'
-import { formatDateTime, formatExpiryShort, truncUnit, expirySemaphore } from '@/lib/format'
+import { formatDateTime, truncUnit, expirySemaphore } from '@/lib/format'
 import { LOCALE, SALE_REASONS, EXIT_REASONS, EXIT_REASON_LABELS } from '@/lib/constants'
 import { type Station, type SaleReason, type ExitReason } from '@/types/database'
 import { createSaleExit } from '@/lib/sale-actions'
+import { extendLotToEndOfDay } from '@/lib/actions'
+import { moveLots } from '@/lib/move-actions'
 import { useToast } from '@/components/Toast'
+import { STATIONS } from '@/lib/constants'
 
 const STATION_COLORS: Record<Station, string> = {
   Partida: 'bg-orange-100 text-orange-700',
@@ -18,7 +21,7 @@ const STATION_COLORS: Record<Station, string> = {
 export type LotResult = {
   id: string
   production_id?: string
-  lot_number: number | null
+  lot_number: string | null
   preparation_name: string
   unit: string
   quantity: number
@@ -39,14 +42,31 @@ const DOT_CLS = {
   green: 'bg-green-500',
 } as const
 
+function FrozenBadge(): React.JSX.Element {
+  return (
+    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-sm font-semibold bg-blue-100 text-blue-700">
+      Congelat
+    </span>
+  )
+}
+
+function FrozenDot(): React.JSX.Element {
+  return (
+    <span className="inline-flex items-center gap-1.5 w-[3.75rem]">
+      <span className="w-2.5 h-2.5 rounded-full shrink-0 bg-blue-500" />
+      <span className="text-xs text-blue-600 font-semibold">Cong.</span>
+    </span>
+  )
+}
+
 function ExpiryDot({ iso }: { iso: string }): React.JSX.Element {
   const s = expirySemaphore(iso)
   const date = new Date(iso)
-  const time = date.toLocaleString(LOCALE, { hour: '2-digit', minute: '2-digit' })
+  const day = date.toLocaleString(LOCALE, { day: '2-digit', month: '2-digit' })
   return (
-    <span className="inline-flex items-center gap-1.5">
-      <span className={`w-2.5 h-2.5 rounded-full ${DOT_CLS[s]}`} />
-      <span className="text-xs text-gray-500">{s === 'red' ? formatExpiryShort(iso) : time}</span>
+    <span className="inline-flex items-center gap-1.5 w-[3.75rem]">
+      <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${DOT_CLS[s]}`} />
+      <span className="text-xs text-gray-500 tabular-nums">{day}</span>
     </span>
   )
 }
@@ -68,7 +88,7 @@ function LotSaleForm({ lot, onClose }: { lot: LotResult; onClose: () => void }):
   const { showToast } = useToast()
   const [quantity, setQuantity] = useState('')
   const [reason, setReason] = useState<SaleReason>('merma')
-  const [exitReason, setExitReason] = useState<ExitReason>('caducitat')
+  const [exitReason, setExitReason] = useState<ExitReason>('accident')
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
   const [confirming, setConfirming] = useState<{ qty: number; reason: SaleReason } | null>(null)
@@ -199,13 +219,6 @@ function LotSaleForm({ lot, onClose }: { lot: LotResult; onClose: () => void }):
             </button>
           ))}
         </div>
-        <button
-          onClick={onClose}
-          disabled={pending}
-          className="w-14 shrink-0 h-14 rounded-xl border border-[#e5e3de] text-gray-400 text-base font-semibold hover:bg-gray-100 disabled:opacity-50 transition-colors"
-        >
-          ✕
-        </button>
       </div>
       {reason === 'merma' && (
         <div className="flex gap-2 flex-wrap">
@@ -233,13 +246,120 @@ function LotSaleForm({ lot, onClose }: { lot: LotResult; onClose: () => void }):
       >
         Sale
       </button>
+      <button
+        onClick={onClose}
+        disabled={pending}
+        className="h-14 rounded-xl border border-gray-300 text-gray-700 text-base font-semibold hover:bg-gray-100"
+      >
+        Anul·lar
+      </button>
     </div>
   )
 }
 
-export function LoteCard({ lot, variant, showSale = false }: { lot: LotResult; variant?: 'critical' | 'warning' | 'tomorrow'; showSale?: boolean }): React.JSX.Element {
+const MOVE_STATION_COLORS: Record<Station, { bg: string; border: string; text: string; activeBg: string }> = {
+  Partida:    { bg: 'bg-orange-50', border: 'border-orange-300', text: 'text-orange-700', activeBg: 'bg-orange-600' },
+  Congelador: { bg: 'bg-blue-50',   border: 'border-blue-300',   text: 'text-blue-700',   activeBg: 'bg-blue-600' },
+  Camara:     { bg: 'bg-teal-50',   border: 'border-teal-300',   text: 'text-teal-700',   activeBg: 'bg-teal-600' },
+  Timbre:     { bg: 'bg-pink-50',   border: 'border-pink-300',   text: 'text-pink-700',   activeBg: 'bg-pink-600' },
+}
+
+function LotMoveForm({ lot, onClose }: { lot: LotResult; onClose: () => void }): React.JSX.Element {
+  const { showToast } = useToast()
+  const [targetStation, setTargetStation] = useState<Station | null>(null)
+  const [pending, startTransition] = useTransition()
+
+  const availableStations = STATIONS.filter((s) => s !== lot.station)
+  const isFreezing = targetStation === 'Congelador'
+
+  function handleMove(): void {
+    if (!targetStation || !lot.production_id) return
+    startTransition(async () => {
+      const result = await moveLots(lot.production_id!, [lot.id], targetStation)
+      if (result.error) {
+        showToast(`Error movent lot: ${result.error}`)
+      } else {
+        showToast(`Lot #${lot.lot_number} mogut a ${targetStation}`)
+        onClose()
+      }
+    })
+  }
+
+  return (
+    <div className="px-5 py-3 flex flex-col gap-3">
+      <span className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Moure a</span>
+      <div className="flex gap-2">
+        {availableStations.map((s) => {
+          const colors = MOVE_STATION_COLORS[s]
+          const active = targetStation === s
+          return (
+            <button
+              key={s}
+              onClick={() => setTargetStation(s)}
+              disabled={pending}
+              className={`flex-1 h-14 rounded-xl text-base font-semibold border transition-colors disabled:opacity-50 ${
+                active
+                  ? `${colors.activeBg} border-transparent text-white`
+                  : `${colors.bg} ${colors.border} ${colors.text}`
+              }`}
+            >
+              {s}
+            </button>
+          )
+        })}
+      </div>
+      {isFreezing && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 border border-blue-200">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-600 shrink-0">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+          <span className="text-sm text-blue-700">La caducitat es pausarà (congelat)</span>
+        </div>
+      )}
+      <button
+        onClick={handleMove}
+        disabled={pending || !targetStation}
+        className="w-full h-14 rounded-xl bg-blue-600 text-white text-base font-semibold hover:bg-blue-700 disabled:opacity-40 transition-colors"
+      >
+        {pending ? 'Movent...' : 'Moure'}
+      </button>
+      <button
+        onClick={onClose}
+        disabled={pending}
+        className="h-14 rounded-xl border border-gray-300 text-gray-700 text-base font-semibold hover:bg-gray-100"
+      >
+        Anul·lar
+      </button>
+    </div>
+  )
+}
+
+function ExtendButton({ logId }: { logId: string }): React.JSX.Element {
+  const [pending, startTransition] = useTransition()
+
+  function handleExtend(): void {
+    startTransition(async () => {
+      await extendLotToEndOfDay(logId)
+    })
+  }
+
+  return (
+    <button
+      onClick={handleExtend}
+      disabled={pending}
+      className="w-full h-14 rounded-xl bg-green-600 text-white text-base font-semibold hover:bg-green-700 disabled:opacity-50 transition-colors"
+    >
+      {pending ? '…' : 'Ampliar vida fins avui'}
+    </button>
+  )
+}
+
+export function LoteCard({ lot, variant, showSale = false, showExtend = false, showMove = false }: { lot: LotResult; variant?: 'critical' | 'warning' | 'tomorrow'; showSale?: boolean; showExtend?: boolean; showMove?: boolean }): React.JSX.Element {
   const [open, setOpen] = useState(false)
   const [showForm, setShowForm] = useState(false)
+  const [showMoveForm, setShowMoveForm] = useState(false)
 
   const cardCls = variant === 'critical'
     ? 'border-l-4 border-l-red-500 bg-red-50 border-red-200'
@@ -257,13 +377,13 @@ export function LoteCard({ lot, variant, showSale = false }: { lot: LotResult; v
         className={`w-full flex items-center gap-3 px-3 py-3 md:px-5 md:py-4 text-left transition-colors ${open ? 'bg-black/5' : 'hover:bg-black/5'}`}
         onClick={() => { setOpen((v) => { if (v) setShowForm(false); return !v }) }}
       >
-        <span className="shrink-0 w-[2.5rem] flex justify-start">
-          <span className="text-xs font-mono font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-2 py-0.5">#{lot.lot_number}</span>
+        <span className="shrink-0">
+          <span className="text-xs font-mono font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-2 py-0.5 whitespace-nowrap">#{lot.lot_number}</span>
         </span>
         <span className="flex-1 text-base font-bold text-gray-900 truncate min-w-0">
           {lot.preparation_name}
         </span>
-        {lot.expires_at && (
+        {lot.expires_at ? (
           <>
             <span className="shrink-0 sm:hidden">
               <ExpiryDot iso={lot.expires_at} />
@@ -272,7 +392,16 @@ export function LoteCard({ lot, variant, showSale = false }: { lot: LotResult; v
               <ExpiryBadge iso={lot.expires_at} />
             </span>
           </>
-        )}
+        ) : lot.station === 'Congelador' ? (
+          <>
+            <span className="shrink-0 sm:hidden">
+              <FrozenDot />
+            </span>
+            <span className="shrink-0 hidden sm:block">
+              <FrozenBadge />
+            </span>
+          </>
+        ) : null}
         <svg
           className={`w-4 h-4 text-gray-400 shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
           fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"
@@ -306,21 +435,38 @@ export function LoteCard({ lot, variant, showSale = false }: { lot: LotResult; v
             <span className="text-sm font-medium text-gray-400 uppercase tracking-wide shrink-0">Caducitat</span>
             {lot.expires_at
               ? <ExpiryBadge iso={lot.expires_at} />
-              : <span className="text-sm text-gray-400">—</span>
+              : lot.station === 'Congelador'
+                ? <FrozenBadge />
+                : <span className="text-sm text-gray-400">—</span>
             }
           </div>
 
-          {canSale && !showForm && (
+          {showExtend && (
             <div className="px-5 py-3">
+              <ExtendButton logId={lot.id} />
+            </div>
+          )}
+
+          {canSale && !showForm && !showMoveForm && (
+            <div className="px-5 py-3 flex gap-2">
               <button
                 onClick={() => setShowForm(true)}
-                className="w-full h-14 rounded-xl border border-red-600 text-red-600 text-base font-semibold hover:bg-red-50 transition-colors"
+                className="flex-1 h-14 rounded-xl bg-red-600 text-white text-base font-semibold hover:bg-red-700 transition-colors"
               >
-                Sale
+                - Surt
               </button>
+              {showMove && lot.station && (
+                <button
+                  onClick={() => setShowMoveForm(true)}
+                  className="flex-1 h-14 rounded-xl bg-blue-600 text-white text-base font-semibold hover:bg-blue-700 transition-colors"
+                >
+                  Moure
+                </button>
+              )}
             </div>
           )}
           {canSale && showForm && <LotSaleForm lot={lot} onClose={() => setShowForm(false)} />}
+          {showMove && showMoveForm && <LotMoveForm lot={lot} onClose={() => setShowMoveForm(false)} />}
         </div>
       )}
     </div>
