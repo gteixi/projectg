@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { moveLots } from '@/lib/move-actions'
 import { type ActiveLot, type Station } from '@/types/database'
 import { truncUnit, formatExpiry, expirySemaphore, type ExpirySemaphore } from '@/lib/format'
@@ -50,7 +51,12 @@ export function MovePanel({ productionId, name, unit, station, initialLots, expi
   const [targetStation, setTargetStation] = useState<Station | null>(null)
   const [pending, startTransition] = useTransition()
 
-  const availableStations = STATIONS.filter((s) => s !== station)
+  const selectedLots = lots.filter((l) => selected.has(l.log_id))
+  const effectiveStations = new Set(selectedLots.length > 0
+    ? selectedLots.map((l) => l.current_station ?? station)
+    : [station])
+  const availableStations = STATIONS.filter((s) => !effectiveStations.has(s))
+  const validTarget = targetStation && availableStations.includes(targetStation) ? targetStation : null
   const unitLabel = truncUnit(unit)
 
   function toggleLot(logId: string): void {
@@ -68,21 +74,21 @@ export function MovePanel({ productionId, name, unit, station, initialLots, expi
   }
 
   function handleSubmit(): void {
-    if (!targetStation || selected.size === 0) return
+    if (!validTarget || selected.size === 0) return
     startTransition(async () => {
-      const result = await moveLots(productionId, [...selected], targetStation)
+      const result = await moveLots(productionId, [...selected], validTarget)
       if (result.error) {
         showToast(`Error movent lots: ${result.error}`)
       } else {
         const count = selected.size
-        showToast(`${count} lot${count > 1 ? 's' : ''} mogut${count > 1 ? 's' : ''} a ${targetStation}`)
+        showToast(`${count} lot${count > 1 ? 's' : ''} mogut${count > 1 ? 's' : ''} a ${validTarget}`)
         onSuccess?.()
       }
     })
   }
 
   const selectedCount = selected.size
-  const isFreezing = targetStation === 'Congelador'
+  const isFreezing = validTarget === 'Congelador'
 
   return (
     <div className="flex flex-col gap-4">
@@ -149,7 +155,7 @@ export function MovePanel({ productionId, name, unit, station, initialLots, expi
             <div className="flex gap-2">
               {availableStations.map((s) => {
                 const colors = STATION_COLORS[s]
-                const active = targetStation === s
+                const active = validTarget === s
                 return (
                   <button
                     key={s}
@@ -183,7 +189,7 @@ export function MovePanel({ productionId, name, unit, station, initialLots, expi
 
       <button
         onClick={handleSubmit}
-        disabled={pending || selectedCount === 0 || !targetStation}
+        disabled={pending || selectedCount === 0 || !validTarget}
         className="w-full h-14 rounded-xl bg-blue-600 text-white text-base font-semibold hover:bg-blue-700 disabled:opacity-40 transition-colors"
       >
         {pending ? 'Movent...' : `Moure ${selectedCount} lot${selectedCount !== 1 ? 's' : ''}`}

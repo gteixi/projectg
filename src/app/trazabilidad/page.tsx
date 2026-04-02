@@ -6,7 +6,7 @@ import { TrazabilidadClient } from '@/components/TrazabilidadClient'
 import { type ProductionJoin } from '@/types/database'
 import { TRAZABILIDAD_FETCH_LIMIT } from '@/lib/constants'
 
-const LOTS_COLUMNS = 'id, production_id, quantity, logged_at, expires_at, batch_number, productions(name, unit, station)' as const
+const LOTS_COLUMNS = 'id, production_id, quantity, logged_at, expires_at, batch_number, current_station, productions(name, unit, station)' as const
 
 export default async function TrazabilidadPage(): Promise<React.JSX.Element> {
   const session = await requireAuth()
@@ -53,7 +53,7 @@ export default async function TrazabilidadPage(): Promise<React.JSX.Element> {
       quantity: remaining,
       logged_at: log.logged_at as string,
       expires_at: log.expires_at as string | null,
-      station: prep?.station,
+      station: (log.current_station as LotResult['station']) ?? prep?.station,
     })
   }
 

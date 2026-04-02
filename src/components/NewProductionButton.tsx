@@ -5,7 +5,8 @@ import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { createPreparation } from '@/lib/prep-actions'
 import { suggestShelfLife } from '@/lib/ai-actions'
-import { uploadRecipePhoto, deleteRecipePhoto, getRecipePhotoUrl } from '@/lib/photo-actions'
+import { uploadRecipePhoto, deleteRecipePhoto } from '@/lib/photo-actions'
+import { getRecipePhotoUrl } from '@/lib/photo-utils'
 import { compressImage } from '@/lib/image-utils'
 import { type Station } from '@/types/database'
 import { STATIONS, UNITS, type Unit, MIN_PREP_NAME_LENGTH } from '@/lib/constants'
@@ -324,7 +325,7 @@ export function NewProductionButton() {
           {serverError && <p className="text-base text-red-600">{serverError}</p>}
         </div>
 
-        <div className="px-6 pb-6 pt-2 flex gap-3">
+        <div className="px-6 pb-6 pt-2 flex gap-3 shrink-0">
           <button
             onClick={handleClose}
             disabled={pending}

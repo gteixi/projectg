@@ -22,10 +22,9 @@ export async function getActiveLots(
       .eq('kitchen_user_id', session.userId)
       .gt('quantity', 0)
       .gte('logged_at', todayStart.toISOString())
-      .not('expires_at', 'is', null)
-      .gt('expires_at', new Date().toISOString())
+      .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
       .not('batch_number', 'is', null)
-      .order('expires_at', { ascending: true }),
+      .order('expires_at', { ascending: true, nullsFirst: false }),
     supabase
       .from('stock_exit_lots')
       .select('batch_number, quantity')

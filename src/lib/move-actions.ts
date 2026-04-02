@@ -36,6 +36,12 @@ export async function moveLots(
 
   const now = new Date()
   const isFreezing = targetStation === 'Congelador'
+  const newCurrentStation = targetStation === prod.station ? null : targetStation
+
+  // Group lots by the update they need to avoid N+1
+  const freezeLotIds: string[] = []
+  const unfreezeLotIds: string[] = []
+  const moveLotIds: string[] = []
 
   for (const log of logs) {
     const effectiveStation = (log.current_station as Station | null) ?? prod.station
@@ -43,26 +49,49 @@ export async function moveLots(
 
     const comingFromFreezer = effectiveStation === 'Congelador'
 
-    const update: Record<string, unknown> = {
-      current_station: targetStation === prod.station ? null : targetStation,
-    }
-
     if (isFreezing) {
-      update.expires_at = null
-    } else if (comingFromFreezer && prod.shelf_life_hours) {
-      update.expires_at = new Date(now.getTime() + prod.shelf_life_hours * MS_PER_HOUR).toISOString()
+      freezeLotIds.push(log.id)
+    } else if (comingFromFreezer) {
+      unfreezeLotIds.push(log.id)
+    } else {
+      moveLotIds.push(log.id)
     }
+  }
 
+  // Batch: freeze (set expires_at = NULL)
+  if (freezeLotIds.length > 0) {
     const { error } = await supabase
       .from('production_logs')
-      .update(update)
-      .eq('id', log.id)
+      .update({ current_station: newCurrentStation, expires_at: null })
+      .in('id', freezeLotIds)
       .eq('kitchen_user_id', session.userId)
-
     if (error) return { error: error.message }
   }
 
-  revalidatePath('/afegir', 'page')
+  // Batch: unfreeze (recalculate expires_at)
+  if (unfreezeLotIds.length > 0) {
+    const newExpiresAt = prod.shelf_life_hours
+      ? new Date(now.getTime() + prod.shelf_life_hours * MS_PER_HOUR).toISOString()
+      : new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59).toISOString()
+
+    const { error } = await supabase
+      .from('production_logs')
+      .update({ current_station: newCurrentStation, expires_at: newExpiresAt })
+      .in('id', unfreezeLotIds)
+      .eq('kitchen_user_id', session.userId)
+    if (error) return { error: error.message }
+  }
+
+  // Batch: simple move (no expiry change)
+  if (moveLotIds.length > 0) {
+    const { error } = await supabase
+      .from('production_logs')
+      .update({ current_station: newCurrentStation })
+      .in('id', moveLotIds)
+      .eq('kitchen_user_id', session.userId)
+    if (error) return { error: error.message }
+  }
+
   revalidatePath('/urgent', 'page')
   revalidatePath('/historial', 'page')
   revalidatePath('/trazabilidad', 'page')
