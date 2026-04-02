@@ -1,14 +1,7 @@
 'use client'
 
-import { type ActiveLot, type Station } from '@/types/database'
+import { type ActiveLot } from '@/types/database'
 import { formatExpiry, truncUnit, expirySemaphore, type ExpirySemaphore } from '@/lib/format'
-
-const STATION_BADGE: Record<Station, { bg: string; text: string }> = {
-  Partida:    { bg: 'bg-orange-50 border-orange-200', text: 'text-orange-700' },
-  Congelador: { bg: 'bg-blue-50 border-blue-200',     text: 'text-blue-700' },
-  Camara:     { bg: 'bg-teal-50 border-teal-200',     text: 'text-teal-700' },
-  Timbre:     { bg: 'bg-pink-50 border-pink-200',     text: 'text-pink-700' },
-}
 
 const textColor: Record<ExpirySemaphore, string> = {
   green: 'text-[#16a34a]',
@@ -47,14 +40,6 @@ export function LotList({ lots, unit }: { lots: ActiveLot[]; unit: string }): Re
             </span>
             <div className="flex flex-col items-end gap-0.5">
               <span className="font-semibold text-gray-800 tabular-nums">{lot.quantity} {truncUnit(unit)}</span>
-              {lot.current_station && (() => {
-                const badge = STATION_BADGE[lot.current_station]
-                return (
-                  <span className={`text-[10px] font-semibold border rounded px-1.5 py-0.5 ${badge.bg} ${badge.text}`}>
-                    {lot.current_station}
-                  </span>
-                )
-              })()}
               {frozen
                 ? <span className="text-xs text-blue-600 font-semibold">Congelat</span>
                 : <span className={`text-xs ${textColor[s!]}`}>{formatExpiry(lot.expires_at!)}</span>
