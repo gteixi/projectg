@@ -114,6 +114,15 @@ export async function moveLots(
         .eq('kitchen_user_id', session.userId)
       if (error) return { error: error.message }
     }
+
+    // Save custom expiry as production's shelf_life_hours for future lots
+    if (unfreezeExpiryHours && !prod.shelf_life_hours) {
+      await supabase
+        .from('productions')
+        .update({ shelf_life_hours: unfreezeExpiryHours })
+        .eq('id', productionId)
+        .eq('kitchen_user_id', session.userId)
+    }
   }
 
   // Batch: simple move (no expiry change)
