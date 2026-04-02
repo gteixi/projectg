@@ -6,7 +6,7 @@ import { NewProductionButton } from '@/components/NewProductionButton'
 import { type StockActualHoy, type ActiveLot } from '@/types/database'
 
 const STOCK_COLUMNS = 'production_id, name, unit, shelf_life_hours, station, stock_total, next_expiry' as const
-const LOTS_COLUMNS = 'id, production_id, batch_number, quantity, expires_at, current_station' as const
+const LOTS_COLUMNS = 'id, production_id, batch_number, quantity, expires_at, current_station, productions(station)' as const
 
 export default async function Home(): Promise<React.JSX.Element> {
   const session = await requireAuth()
@@ -55,19 +55,6 @@ export default async function Home(): Promise<React.JSX.Element> {
 
   const items = (stockResult.data ?? []) as StockActualHoy[]
 
-  // Build a map of production station (from items) for each production_id
-  const prodDefaultStation = new Map<string, string>()
-  for (const item of items) {
-    if (!prodDefaultStation.has(item.production_id)) {
-      prodDefaultStation.set(item.production_id, item.station)
-    }
-  }
-
-  // Key: "production_id:station" to match lots to the correct daily_stock row
-  function compositeKey(productionId: string, station: string): string {
-    return `${productionId}:${station}`
-  }
-
   function buildLotsMap(logs: typeof logsResult.data): Record<string, ActiveLot[]> {
     const map: Record<string, ActiveLot[]> = {}
     for (const l of logs ?? []) {
@@ -76,8 +63,10 @@ export default async function Home(): Promise<React.JSX.Element> {
       const remaining = produced - exited
       if (remaining <= 0) continue
       const pid = l.production_id as string
-      const effectiveStation = (l.current_station as string | null) ?? prodDefaultStation.get(pid) ?? ''
-      const key = compositeKey(pid, effectiveStation)
+      const prod = Array.isArray(l.productions) ? l.productions[0] : l.productions
+      const defaultStation = (prod as { station: string } | null)?.station ?? ''
+      const effectiveStation = (l.current_station as string | null) ?? defaultStation
+      const key = `${pid}:${effectiveStation}`
       if (!map[key]) map[key] = []
       map[key].push({
         log_id: l.id as string,
