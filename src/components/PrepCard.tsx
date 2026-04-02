@@ -34,7 +34,7 @@ export function PrepCard({ item, initialLots, expiredLots, openMode, onSetMode, 
       </div>
       {showInfo && (
         <div className="mb-4 p-3 rounded-lg bg-[#fafaf8]">
-          <RecipePanel productionId={item.production_id} kitchenUserId={item.kitchen_user_id} />
+          <RecipePanel productionId={item.production_id} />
         </div>
       )}
       <div className="mb-4">
@@ -124,6 +124,7 @@ export function PrepCard({ item, initialLots, expiredLots, openMode, onSetMode, 
             name={item.name}
             unit={item.unit}
             shelfLifeHours={item.shelf_life_hours}
+            station={item.station}
             variant="form"
             onClose={() => onSetMode(null)}
             onSuccess={(qty) => onStockDelta(qty)}

@@ -1,6 +1,7 @@
 'use server'
 
 import Anthropic from '@anthropic-ai/sdk'
+import { requireAuth } from '@/lib/require-auth'
 
 interface ShelfLifeSuggestion {
   hours: number | null
@@ -42,6 +43,7 @@ function checkRateLimit(): string | null {
 }
 
 export async function suggestShelfLife(name: string): Promise<SuggestResult> {
+  await requireAuth()
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) {
     return { suggestion: null, error: 'ANTHROPIC_API_KEY no configurada' }

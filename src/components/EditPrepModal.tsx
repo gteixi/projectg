@@ -3,12 +3,11 @@
 import { useState, useTransition, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
-import { updatePreparation, deactivatePreparation } from '@/lib/prep-actions'
+import { updatePreparation, deactivatePreparation, getProductionRecipe } from '@/lib/prep-actions'
 import { suggestShelfLife } from '@/lib/ai-actions'
 import { uploadRecipePhoto, deleteRecipePhoto } from '@/lib/photo-actions'
 import { getRecipePhotoUrl } from '@/lib/photo-utils'
 import { compressImage } from '@/lib/image-utils'
-import { createClient } from '@/lib/supabase-browser'
 import { type Station, type StockActualHoy } from '@/types/database'
 import { STATIONS, UNITS, type Unit, MIN_PREP_NAME_LENGTH } from '@/lib/constants'
 
@@ -40,18 +39,12 @@ export function EditPrepModal({ item, onClose }: Props): React.JSX.Element {
   const router = useRouter()
 
   useEffect(() => {
-    const supabase = createClient()
-    supabase
-      .from('productions')
-      .select('recipe, recipe_photos')
-      .eq('id', item.production_id)
-      .single()
-      .then(({ data }) => {
-        if (data) {
-          setRecipe(data.recipe ?? '')
-          setPhotos(data.recipe_photos ?? [])
-        }
-      })
+    getProductionRecipe(item.production_id).then((data) => {
+      if (data) {
+        setRecipe(data.recipe ?? '')
+        setPhotos(data.recipe_photos ?? [])
+      }
+    })
   }, [item.production_id])
 
   async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>): Promise<void> {

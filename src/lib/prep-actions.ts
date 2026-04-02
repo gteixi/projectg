@@ -39,6 +39,20 @@ export async function updatePreparation(
   return { error: null }
 }
 
+export async function getProductionRecipe(
+  productionId: string
+): Promise<{ recipe: string | null; recipe_photos: string[] } | null> {
+  const session = await requireAuth()
+  const supabase = await createServerClient()
+  const { data } = await supabase
+    .from('productions')
+    .select('recipe, recipe_photos')
+    .eq('id', productionId)
+    .eq('kitchen_user_id', session.userId)
+    .single()
+  return data ? { recipe: data.recipe ?? null, recipe_photos: data.recipe_photos ?? [] } : null
+}
+
 export async function deactivatePreparation(id: string): Promise<ActionResult> {
   const session = await requireAuth()
   const supabase = await createServerClient()

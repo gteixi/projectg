@@ -4,6 +4,7 @@ import { SidebarServer } from '@/components/SidebarServer'
 import { type LotResult } from '@/components/LoteCard'
 import { UrgentClient, type UrgentData } from '@/components/UrgentClient'
 import { URGENT_LOOKAHEAD_DAYS, LOCALE } from '@/lib/constants'
+import { fetchExitedByBatch } from '@/lib/stock-helpers'
 
 export default async function UrgentPage(): Promise<React.JSX.Element> {
   const session = await requireAuth()
@@ -12,31 +13,21 @@ export default async function UrgentPage(): Promise<React.JSX.Element> {
   const now = new Date()
   const startOfDayAfterTomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + URGENT_LOOKAHEAD_DAYS).toISOString()
 
-  const [logsResult, exitsResult] = await Promise.all([
-    supabase
-      .from('production_logs')
-      .select('id, production_id, quantity, logged_at, expires_at, batch_number, productions!inner(name, unit, station)')
-      .eq('kitchen_user_id', session.userId)
-      .not('batch_number', 'is', null)
-      .not('expires_at', 'is', null)
-      .lt('expires_at', startOfDayAfterTomorrow)
-      .order('expires_at', { ascending: true }),
-    supabase
-      .from('stock_exit_lots')
-      .select('batch_number, quantity')
-      .eq('kitchen_user_id', session.userId),
-  ])
+  const logsResult = await supabase
+    .from('production_logs')
+    .select('id, production_id, quantity, logged_at, expires_at, batch_number, productions!inner(name, unit, station)')
+    .eq('kitchen_user_id', session.userId)
+    .not('batch_number', 'is', null)
+    .not('expires_at', 'is', null)
+    .lt('expires_at', startOfDayAfterTomorrow)
+    .order('expires_at', { ascending: true })
 
   if (logsResult.error) {
     return <pre className="p-8 text-red-500">{logsResult.error.message}</pre>
   }
 
-  // Sum exited quantity per batch_number
-  const exitedByBatch = new Map<string, number>()
-  for (const row of exitsResult.data ?? []) {
-    const bn = String(row.batch_number)
-    exitedByBatch.set(bn, (exitedByBatch.get(bn) ?? 0) + Number(row.quantity))
-  }
+  const batchNumbers = (logsResult.data ?? []).map((r) => String(r.batch_number))
+  const exitedByBatch = await fetchExitedByBatch(supabase, session.userId, batchNumbers)
 
   const tomorrowStr = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).toDateString()
 

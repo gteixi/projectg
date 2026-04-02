@@ -130,7 +130,7 @@ export function PrepRow({ item, initialLots, expiredLots, openMode, onSetMode, o
       {showInfo && (
         <tr className="border-b border-[#e5e3de]">
           <td colSpan={3} className="px-6 py-4 bg-[#fafaf8]">
-            <RecipePanel productionId={item.production_id} kitchenUserId={item.kitchen_user_id} />
+            <RecipePanel productionId={item.production_id} />
           </td>
         </tr>
       )}
@@ -165,6 +165,7 @@ export function PrepRow({ item, initialLots, expiredLots, openMode, onSetMode, o
                 name={item.name}
                 unit={item.unit}
                 shelfLifeHours={item.shelf_life_hours}
+                station={item.station}
                 variant="form"
                 onClose={() => onSetMode(null)}
                 onSuccess={(qty) => onStockDelta(qty)}

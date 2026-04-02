@@ -1,31 +1,24 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { createClient } from '@/lib/supabase-browser'
 import { getRecipePhotoUrl } from '@/lib/photo-utils'
+import { getProductionRecipe } from '@/lib/prep-actions'
 
-export function RecipePanel({ productionId, kitchenUserId }: { productionId: string; kitchenUserId: string }): React.JSX.Element | null {
+export function RecipePanel({ productionId }: { productionId: string }): React.JSX.Element | null {
   const [recipe, setRecipe] = useState<string | null>(null)
   const [photos, setPhotos] = useState<string[]>([])
   const [loaded, setLoaded] = useState(false)
   const [viewingPhoto, setViewingPhoto] = useState<string | null>(null)
 
   useEffect(() => {
-    const supabase = createClient()
-    supabase
-      .from('productions')
-      .select('recipe, recipe_photos')
-      .eq('id', productionId)
-      .eq('kitchen_user_id', kitchenUserId)
-      .single()
-      .then(({ data }) => {
-        if (data) {
-          setRecipe(data.recipe as string | null)
-          setPhotos((data.recipe_photos as string[]) ?? [])
-        }
-        setLoaded(true)
-      })
-  }, [productionId, kitchenUserId])
+    getProductionRecipe(productionId).then((data) => {
+      if (data) {
+        setRecipe(data.recipe)
+        setPhotos(data.recipe_photos ?? [])
+      }
+      setLoaded(true)
+    })
+  }, [productionId])
 
   if (!loaded) return null
 

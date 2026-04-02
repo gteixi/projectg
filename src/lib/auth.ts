@@ -2,10 +2,32 @@
 
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
+import { createHmac } from 'crypto'
 import { createServerClient } from '@/lib/supabase'
 
 const SESSION_COOKIE = 'kitchen_session'
 const SESSION_MAX_AGE = 60 * 60 * 24 * 30 // 30 days
+
+function getSecret(): string {
+  const secret = process.env.SESSION_SECRET
+  if (!secret) throw new Error('SESSION_SECRET env var is required')
+  return secret
+}
+
+function signPayload(payload: string): string {
+  const sig = createHmac('sha256', getSecret()).update(payload).digest('base64url')
+  return `${payload}.${sig}`
+}
+
+function verifyPayload(token: string): string | null {
+  const idx = token.lastIndexOf('.')
+  if (idx < 0) return null
+  const payload = token.slice(0, idx)
+  const sig = token.slice(idx + 1)
+  const expected = createHmac('sha256', getSecret()).update(payload).digest('base64url')
+  if (sig !== expected) return null
+  return payload
+}
 
 async function hashPin(pin: string): Promise<string> {
   const encoder = new TextEncoder()
@@ -32,7 +54,7 @@ export async function loginWithPin(pin: string): Promise<{ error: string | null 
   if (error || !data) return { error: 'PIN incorrecte' }
 
   const session = JSON.stringify({ userId: data.id, name: data.name })
-  const encoded = Buffer.from(session).toString('base64')
+  const encoded = signPayload(Buffer.from(session).toString('base64'))
 
   const cookieStore = await cookies()
   cookieStore.set(SESSION_COOKIE, encoded, {
@@ -58,7 +80,9 @@ export async function getSession(): Promise<{ userId: string; name: string } | n
   if (!cookie?.value) return null
 
   try {
-    const decoded = Buffer.from(cookie.value, 'base64').toString('utf-8')
+    const payload = verifyPayload(cookie.value)
+    if (!payload) return null
+    const decoded = Buffer.from(payload, 'base64').toString('utf-8')
     const session = JSON.parse(decoded) as { userId: string; name: string }
     if (session.userId && session.name) return session
     return null

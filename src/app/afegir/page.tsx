@@ -4,6 +4,7 @@ import { SidebarServer } from '@/components/SidebarServer'
 import { PrepListClient } from '@/components/PrepListClient'
 import { NewProductionButton } from '@/components/NewProductionButton'
 import { type StockActualHoy, type ActiveLot } from '@/types/database'
+import { fetchExitedByBatch } from '@/lib/stock-helpers'
 
 const STOCK_COLUMNS = 'production_id, name, unit, shelf_life_hours, station, stock_total, next_expiry' as const
 const LOTS_COLUMNS = 'id, production_id, batch_number, quantity, expires_at, current_station, productions(station)' as const
@@ -14,7 +15,7 @@ export default async function Home(): Promise<React.JSX.Element> {
 
   const nowIso = new Date().toISOString()
 
-  const [stockResult, logsResult, expiredLogsResult, exitsResult] = await Promise.all([
+  const [stockResult, logsResult, expiredLogsResult] = await Promise.all([
     supabase
       .from('daily_stock')
       .select(STOCK_COLUMNS)
@@ -37,21 +38,17 @@ export default async function Home(): Promise<React.JSX.Element> {
       .lte('expires_at', nowIso)
       .not('batch_number', 'is', null)
       .order('expires_at', { ascending: true }),
-    supabase
-      .from('stock_exit_lots')
-      .select('batch_number, quantity')
-      .eq('kitchen_user_id', session.userId),
   ])
 
   if (stockResult.error) {
     return <pre className="p-8 text-red-500">{stockResult.error.message}</pre>
   }
 
-  const exitedByBatch = new Map<string, number>()
-  for (const row of exitsResult.data ?? []) {
-    const bn = String(row.batch_number)
-    exitedByBatch.set(bn, (exitedByBatch.get(bn) ?? 0) + Number(row.quantity))
-  }
+  const allBatchNumbers = [
+    ...(logsResult.data ?? []).map((l) => String(l.batch_number)),
+    ...(expiredLogsResult.data ?? []).map((l) => String(l.batch_number)),
+  ]
+  const exitedByBatch = await fetchExitedByBatch(supabase, session.userId, allBatchNumbers)
 
   const items = (stockResult.data ?? []) as StockActualHoy[]
 

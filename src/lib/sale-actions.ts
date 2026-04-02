@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createServerClient } from '@/lib/supabase'
 import { requireAuth } from '@/lib/require-auth'
 import { type SaleReason, type ExitReason, type ActiveLot, type FifoBreakdown, type ActionResult } from '@/types/database'
+import { fetchExitedByBatch } from '@/lib/stock-helpers'
 
 export async function getActiveLots(
   productionId: string
@@ -14,30 +15,21 @@ export async function getActiveLots(
   const todayStart = new Date()
   todayStart.setHours(0, 0, 0, 0)
 
-  const [logsResult, exitsResult] = await Promise.all([
-    supabase
-      .from('production_logs')
-      .select('id, batch_number, quantity, expires_at, current_station')
-      .eq('production_id', productionId)
-      .eq('kitchen_user_id', session.userId)
-      .gt('quantity', 0)
-      .gte('logged_at', todayStart.toISOString())
-      .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
-      .not('batch_number', 'is', null)
-      .order('expires_at', { ascending: true, nullsFirst: false }),
-    supabase
-      .from('stock_exit_lots')
-      .select('batch_number, quantity')
-      .eq('kitchen_user_id', session.userId),
-  ])
+  const logsResult = await supabase
+    .from('production_logs')
+    .select('id, batch_number, quantity, expires_at, current_station')
+    .eq('production_id', productionId)
+    .eq('kitchen_user_id', session.userId)
+    .gt('quantity', 0)
+    .gte('logged_at', todayStart.toISOString())
+    .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
+    .not('batch_number', 'is', null)
+    .order('expires_at', { ascending: true, nullsFirst: false })
 
   if (logsResult.error) return { lots: [], error: logsResult.error.message }
 
-  const exitedByBatch = new Map<string, number>()
-  for (const row of exitsResult.data ?? []) {
-    const bn = String(row.batch_number)
-    exitedByBatch.set(bn, (exitedByBatch.get(bn) ?? 0) + Number(row.quantity))
-  }
+  const batchNumbers = (logsResult.data ?? []).map((l) => String(l.batch_number))
+  const exitedByBatch = await fetchExitedByBatch(supabase, session.userId, batchNumbers)
 
   const lots: ActiveLot[] = []
   for (const l of logsResult.data ?? []) {

@@ -59,6 +59,7 @@ export async function logProduction(
   quantity: number,
   shelfLifeHours: number | null,
   batchNumber: string,
+  station?: string | null,
 ): Promise<ProductionResult> {
   const session = await requireAuth()
   if (quantity <= 0) return { error: 'La quantitat ha de ser major que 0', batch_number: null }
@@ -76,14 +77,19 @@ export async function logProduction(
     .from('productions')
     .select('station')
     .eq('id', productionId)
+    .eq('kitchen_user_id', session.userId)
     .single()
-  const isFrozen = prod?.station === 'Congelador'
+  if (!prod) return { error: 'Producció no trobada', batch_number: null }
+  const effectiveStation = station ?? prod.station
+  const isFrozen = effectiveStation === 'Congelador'
 
   const now = new Date()
   const expiresAt = isFrozen ? null
     : shelfLifeHours
       ? new Date(now.getTime() + shelfLifeHours * MS_PER_HOUR).toISOString()
       : null
+
+  const currentStation = station && station !== prod.station ? station : null
 
   const { error } = await supabase.from('production_logs').insert({
     production_id: productionId,
@@ -92,6 +98,7 @@ export async function logProduction(
     expires_at: expiresAt,
     batch_number: batchNumber,
     kitchen_user_id: session.userId,
+    ...(currentStation ? { current_station: currentStation } : {}),
   })
 
   if (error) return { error: error.message, batch_number: null }

@@ -11,12 +11,13 @@ interface Props {
   name: string
   unit: string
   shelfLifeHours: number | null
+  station?: string | null
   variant?: 'toggle' | 'form'
   onClose?: () => void
   onSuccess?: (quantity: number) => void
 }
 
-export function ProductionButton({ productionId, name, unit, shelfLifeHours, variant = 'toggle', onClose, onSuccess }: Props): React.JSX.Element | null {
+export function ProductionButton({ productionId, name, unit, shelfLifeHours, station, variant = 'toggle', onClose, onSuccess }: Props): React.JSX.Element | null {
   const [open, setOpen] = useState(variant === 'form')
   const [pending, startTransition] = useTransition()
   const { showToast } = useToast()
@@ -59,7 +60,7 @@ export function ProductionButton({ productionId, name, unit, shelfLifeHours, var
       return
     }
     startTransition(async () => {
-      const result = await logProduction(productionId, qty, shelfLifeHours, bn)
+      const result = await logProduction(productionId, qty, shelfLifeHours, bn, station)
       if (result.error) {
         showToast(`Error registrant ${name}: ${result.error}`)
       } else {

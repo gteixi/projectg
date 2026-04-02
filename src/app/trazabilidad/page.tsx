@@ -5,6 +5,7 @@ import { type LotResult } from '@/components/LoteCard'
 import { TrazabilidadClient } from '@/components/TrazabilidadClient'
 import { type ProductionJoin } from '@/types/database'
 import { TRAZABILIDAD_FETCH_LIMIT } from '@/lib/constants'
+import { fetchExitedByBatch } from '@/lib/stock-helpers'
 
 const LOTS_COLUMNS = 'id, production_id, quantity, logged_at, expires_at, batch_number, current_station, productions(name, unit, station)' as const
 
@@ -12,29 +13,20 @@ export default async function TrazabilidadPage(): Promise<React.JSX.Element> {
   const session = await requireAuth()
   const supabase = await createServerClient()
 
-  const [logsResult, exitsResult] = await Promise.all([
-    supabase
-      .from('production_logs')
-      .select(LOTS_COLUMNS)
-      .eq('kitchen_user_id', session.userId)
-      .not('batch_number', 'is', null)
-      .order('logged_at', { ascending: false })
-      .limit(TRAZABILIDAD_FETCH_LIMIT),
-    supabase
-      .from('stock_exit_lots')
-      .select('batch_number, quantity')
-      .eq('kitchen_user_id', session.userId),
-  ])
+  const logsResult = await supabase
+    .from('production_logs')
+    .select(LOTS_COLUMNS)
+    .eq('kitchen_user_id', session.userId)
+    .not('batch_number', 'is', null)
+    .order('logged_at', { ascending: false })
+    .limit(TRAZABILIDAD_FETCH_LIMIT)
 
   if (logsResult.error) {
     return <pre className="p-8 text-red-500">{logsResult.error.message}</pre>
   }
 
-  const exitedByBatch = new Map<string, number>()
-  for (const row of exitsResult.data ?? []) {
-    const bn = String(row.batch_number)
-    exitedByBatch.set(bn, (exitedByBatch.get(bn) ?? 0) + Number(row.quantity))
-  }
+  const batchNumbers = (logsResult.data ?? []).map((l) => String(l.batch_number))
+  const exitedByBatch = await fetchExitedByBatch(supabase, session.userId, batchNumbers)
 
   const allResults: LotResult[] = []
   for (const log of logsResult.data ?? []) {
