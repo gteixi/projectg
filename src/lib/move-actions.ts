@@ -27,7 +27,7 @@ export async function moveLots(
 
   const { data: logs } = await supabase
     .from('production_logs')
-    .select('id, current_station')
+    .select('id, current_station, batch_number, quantity')
     .in('id', logIds)
     .eq('production_id', productionId)
     .eq('kitchen_user_id', session.userId)
@@ -35,6 +35,7 @@ export async function moveLots(
   if (!logs || logs.length === 0) return { error: 'Lots no trobats' }
 
   const now = new Date()
+  const nowIso = now.toISOString()
   const isFreezing = targetStation === 'Congelador'
   const newCurrentStation = targetStation === prod.station ? null : targetStation
 
@@ -42,10 +43,22 @@ export async function moveLots(
   const freezeLotIds: string[] = []
   const unfreezeLotIds: string[] = []
   const moveLotIds: string[] = []
+  const moveRecords: { production_id: string; log_id: string; batch_number: string; from_station: string; to_station: string; quantity: number; moved_at: string; kitchen_user_id: string }[] = []
 
   for (const log of logs) {
     const effectiveStation = (log.current_station as Station | null) ?? prod.station
     if (effectiveStation === targetStation) continue
+
+    moveRecords.push({
+      production_id: productionId,
+      log_id: log.id,
+      batch_number: log.batch_number as string,
+      from_station: effectiveStation,
+      to_station: targetStation,
+      quantity: Number(log.quantity),
+      moved_at: nowIso,
+      kitchen_user_id: session.userId,
+    })
 
     const comingFromFreezer = effectiveStation === 'Congelador'
 
@@ -89,6 +102,11 @@ export async function moveLots(
       .update({ current_station: newCurrentStation })
       .in('id', moveLotIds)
       .eq('kitchen_user_id', session.userId)
+    if (error) return { error: error.message }
+  }
+
+  if (moveRecords.length > 0) {
+    const { error } = await supabase.from('lot_moves').insert(moveRecords)
     if (error) return { error: error.message }
   }
 
