@@ -92,6 +92,7 @@ export async function moveLots(
     if (error) return { error: error.message }
   }
 
+  revalidatePath('/afegir', 'page')
   revalidatePath('/urgent', 'page')
   revalidatePath('/historial', 'page')
   revalidatePath('/trazabilidad', 'page')
