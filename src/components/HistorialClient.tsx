@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react'
 import { HistorialPrepRow, type LogDetail } from '@/components/HistorialPrepRow'
 import { HistorialSaleRow, type SaleDetail } from '@/components/HistorialSaleRow'
+import { HistorialMoveRow, type MoveDetail } from '@/components/HistorialMoveRow'
 import { SearchInput } from '@/components/SearchInput'
 import { type SaleReason } from '@/types/database'
 
@@ -25,9 +26,19 @@ type SaleSummary = {
   lots: SaleDetail[]
 }
 
+type MoveSummary = {
+  move_group_id: string
+  name: string
+  unit: string
+  lot_count: number
+  to_station: string
+  entries: MoveDetail[]
+}
+
 type DayItem =
   | { kind: 'prep'; sortTime: string; data: PrepSummary }
   | { kind: 'sale'; sortTime: string; data: SaleSummary }
+  | { kind: 'move'; sortTime: string; data: MoveSummary }
 
 export type DaySummary = {
   date: string
@@ -40,6 +51,10 @@ function itemMatchesQuery(item: DayItem, q: string): boolean {
     return item.data.entries.some((e) => e.lot_number && normalize(e.lot_number).includes(q)) ||
       normalize(item.data.name).includes(q)
   }
+  if (item.kind === 'move') {
+    return item.data.entries.some((e) => normalize(e.batch_number).includes(q)) ||
+      normalize(item.data.name).includes(q)
+  }
   return item.data.lots.some((l) => normalize(l.batch_number).includes(q)) ||
     normalize(item.data.name).includes(q)
 }
@@ -47,6 +62,9 @@ function itemMatchesQuery(item: DayItem, q: string): boolean {
 function itemHasLotMatch(item: DayItem, q: string): boolean {
   if (item.kind === 'prep') {
     return item.data.entries.some((e) => e.lot_number && normalize(e.lot_number).includes(q))
+  }
+  if (item.kind === 'move') {
+    return item.data.entries.some((e) => normalize(e.batch_number).includes(q))
   }
   return item.data.lots.some((l) => normalize(l.batch_number).includes(q))
 }
@@ -106,7 +124,7 @@ export function HistorialClient({ days }: { days: DaySummary[] }): React.JSX.Ele
                         entries={item.data.entries}
                         defaultOpen={isLotQuery && q !== '' && itemHasLotMatch(item, q)}
                       />
-                    ) : (
+                    ) : item.kind === 'sale' ? (
                       <HistorialSaleRow
                         key={item.data.exit_id}
                         name={item.data.name}
@@ -115,6 +133,16 @@ export function HistorialClient({ days }: { days: DaySummary[] }): React.JSX.Ele
                         reason={item.data.reason}
                         exitReason={item.data.exitReason}
                         lots={item.data.lots}
+                        defaultOpen={isLotQuery && q !== '' && itemHasLotMatch(item, q)}
+                      />
+                    ) : (
+                      <HistorialMoveRow
+                        key={item.data.move_group_id}
+                        name={item.data.name}
+                        unit={item.data.unit}
+                        lot_count={item.data.lot_count}
+                        to_station={item.data.to_station}
+                        entries={item.data.entries}
                         defaultOpen={isLotQuery && q !== '' && itemHasLotMatch(item, q)}
                       />
                     )

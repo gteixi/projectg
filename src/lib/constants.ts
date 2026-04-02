@@ -32,6 +32,7 @@ export const MS_PER_DAY = 86_400_000
 export const HISTORIAL_DAYS = 7
 export const HISTORIAL_LOGS_LIMIT = 500
 export const HISTORIAL_EXITS_LIMIT = 200
+export const HISTORIAL_MOVES_LIMIT = 200
 export const TRAZABILIDAD_PAGE_SIZE = 10
 export const TRAZABILIDAD_FETCH_LIMIT = 500
 export const URGENT_LOOKAHEAD_DAYS = 2

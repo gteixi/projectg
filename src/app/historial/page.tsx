@@ -6,7 +6,7 @@ import { HistorialClient, type DaySummary } from '@/components/HistorialClient'
 import { type LogDetail } from '@/components/HistorialPrepRow'
 import { type SaleReason, type ProductionJoin, type ExitLotJoin } from '@/types/database'
 import { formatDateLabel, formatTime } from '@/lib/format'
-import { HISTORIAL_DAYS, HISTORIAL_LOGS_LIMIT, HISTORIAL_EXITS_LIMIT } from '@/lib/constants'
+import { HISTORIAL_DAYS, HISTORIAL_LOGS_LIMIT, HISTORIAL_EXITS_LIMIT, HISTORIAL_MOVES_LIMIT } from '@/lib/constants'
 
 type DayItem = DaySummary['items'][number]
 
@@ -31,7 +31,7 @@ export default async function HistorialPage({
   const sinceIso = startDate.toISOString()
   const untilIso = endDate.toISOString()
 
-  const [logsResult, exitsResult] = await Promise.all([
+  const [logsResult, exitsResult, movesResult] = await Promise.all([
     supabase
       .from('production_logs')
       .select('production_id, quantity, logged_at, batch_number, productions!inner(name, unit)')
@@ -48,10 +48,19 @@ export default async function HistorialPage({
       .lte('logged_at', untilIso)
       .order('logged_at', { ascending: false })
       .limit(HISTORIAL_EXITS_LIMIT),
+    supabase
+      .from('lot_moves')
+      .select('id, production_id, batch_number, from_station, to_station, quantity, moved_at, productions(name, unit)')
+      .eq('kitchen_user_id', session.userId)
+      .gte('moved_at', sinceIso)
+      .lte('moved_at', untilIso)
+      .order('moved_at', { ascending: false })
+      .limit(HISTORIAL_MOVES_LIMIT),
   ])
 
   if (logsResult.error) return <pre className="p-8 text-red-500">{logsResult.error.message}</pre>
   if (exitsResult.error) return <pre className="p-8 text-red-500">{exitsResult.error.message}</pre>
+  if (movesResult.error) return <pre className="p-8 text-red-500">{movesResult.error.message}</pre>
 
   type DayLog = { quantity: number; batch_number: string | null; logged_at: string; name: string; unit: string }
   const byDate = new Map<string, Map<string, DayLog[]>>()
@@ -92,6 +101,26 @@ export default async function HistorialPage({
     })
   }
 
+  type MoveEntry = { id: string; batch_number: string; from_station: string; to_station: string; quantity: number; moved_at: string; name: string; unit: string; production_id: string }
+  const movesByDate = new Map<string, MoveEntry[]>()
+  for (const move of movesResult.data ?? []) {
+    const rawProd = move.productions as ProductionJoin | ProductionJoin[] | null
+    const prod = Array.isArray(rawProd) ? rawProd[0] ?? null : rawProd
+    const dateStr = (move.moved_at as string).slice(0, 10)
+    if (!movesByDate.has(dateStr)) movesByDate.set(dateStr, [])
+    movesByDate.get(dateStr)!.push({
+      id: move.id as string,
+      batch_number: move.batch_number as string,
+      from_station: move.from_station as string,
+      to_station: move.to_station as string,
+      quantity: Number(move.quantity),
+      moved_at: move.moved_at as string,
+      name: prod?.name ?? '—',
+      unit: prod?.unit ?? '',
+      production_id: move.production_id as string,
+    })
+  }
+
   const days: DaySummary[] = []
   for (let i = 0; i < numDays; i++) {
     const d = new Date(selectedDate + 'T12:00:00')
@@ -124,7 +153,37 @@ export default async function HistorialPage({
       data: sale,
     }))
 
-    const items: DayItem[] = [...prepItems, ...saleItems].sort((a, b) =>
+    const moveItems: DayItem[] = []
+    const dayMoves = movesByDate.get(dateStr) ?? []
+    const moveGroups = new Map<string, MoveEntry[]>()
+    for (const m of dayMoves) {
+      const key = `${m.production_id}:${m.to_station}:${m.moved_at}`
+      if (!moveGroups.has(key)) moveGroups.set(key, [])
+      moveGroups.get(key)!.push(m)
+    }
+    for (const [key, entries] of moveGroups) {
+      const first = entries[0]
+      moveItems.push({
+        kind: 'move' as const,
+        sortTime: first.moved_at,
+        data: {
+          move_group_id: key,
+          name: first.name,
+          unit: first.unit,
+          lot_count: entries.length,
+          to_station: first.to_station,
+          entries: entries.map((e) => ({
+            batch_number: e.batch_number,
+            quantity: e.quantity,
+            from_station: e.from_station,
+            to_station: e.to_station,
+            time: formatTime(e.moved_at),
+          })),
+        },
+      })
+    }
+
+    const items: DayItem[] = [...prepItems, ...saleItems, ...moveItems].sort((a, b) =>
       b.sortTime.localeCompare(a.sortTime)
     )
 

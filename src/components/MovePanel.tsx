@@ -45,6 +45,7 @@ interface Props {
 }
 
 export function MovePanel({ productionId, name, unit, station, initialLots, expiredLots, onClose, onSuccess }: Props): React.JSX.Element {
+  const router = useRouter()
   const { showToast } = useToast()
   const lots = [...initialLots, ...expiredLots]
   const [selected, setSelected] = useState<Set<string>>(new Set())
@@ -80,9 +81,8 @@ export function MovePanel({ productionId, name, unit, station, initialLots, expi
       if (result.error) {
         showToast(`Error movent lots: ${result.error}`)
       } else {
-        const count = selected.size
-        showToast(`${count} lot${count > 1 ? 's' : ''} mogut${count > 1 ? 's' : ''} a ${validTarget}`)
         onSuccess?.()
+        router.refresh()
       }
     })
   }

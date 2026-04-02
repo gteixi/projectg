@@ -35,7 +35,7 @@ export function PrepRow({ item, initialLots, expiredLots, openMode, onSetMode, o
           <div className="flex items-center gap-2">
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="text-lg font-semibold text-gray-900 leading-tight">{item.name}</span>
-              <ShelfLifeInfo hours={item.shelf_life_hours} onEdit={() => setEditing(true)} />
+              <ShelfLifeInfo hours={item.shelf_life_hours} productionId={item.production_id} onEdit={() => setEditing(true)} />
             </div>
           </div>
         </td>

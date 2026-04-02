@@ -279,7 +279,6 @@ function LotMoveForm({ lot, onClose }: { lot: LotResult; onClose: () => void }):
       if (result.error) {
         showToast(`Error movent lot: ${result.error}`)
       } else {
-        showToast(`Lot #${lot.lot_number} mogut a ${targetStation}`)
         onClose()
       }
     })

@@ -28,7 +28,7 @@ export function PrepCard({ item, initialLots, expiredLots, openMode, onSetMode, 
       {editing && <EditPrepModal item={item} onClose={() => setEditing(false)} />}
       <div className="mb-4 flex flex-wrap items-center gap-1.5">
         <span className="text-lg font-semibold text-gray-900 leading-tight">{item.name}</span>
-        <ShelfLifeInfo hours={item.shelf_life_hours} onEdit={() => setEditing(true)} align="right" />
+        <ShelfLifeInfo hours={item.shelf_life_hours} productionId={item.production_id} onEdit={() => setEditing(true)} align="right" />
       </div>
       <div className="mb-4">
         {(() => {
