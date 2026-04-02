@@ -27,10 +27,10 @@ export function PrepCard({ item, initialLots, expiredLots, openMode, onSetMode, 
 
   return (
     <div className="px-4 py-5 border-b border-[#e5e3de] last:border-0">
-      {editing && <EditPrepModal item={item} onClose={() => setEditing(false)} />}
+      {editing && <EditPrepModal item={item} onClose={() => { setEditing(false); setShowInfo(false) }} />}
       <div className="mb-4 flex flex-wrap items-center gap-1.5">
         <span className="text-lg font-semibold text-gray-900 leading-tight">{item.name}</span>
-        <ShelfLifeInfo hours={item.shelf_life_hours} onToggle={setShowInfo} onEdit={() => setEditing(true)} align="right" />
+        <ShelfLifeInfo hours={item.shelf_life_hours} open={showInfo} onToggle={setShowInfo} onEdit={() => setEditing(true)} align="right" />
       </div>
       {showInfo && (
         <div className="mb-4 p-3 rounded-lg bg-[#fafaf8]">

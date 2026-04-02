@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 function formatShelfLife(hours: number): string {
   if (hours >= 24) {
@@ -10,8 +10,14 @@ function formatShelfLife(hours: number): string {
   return `${hours}h`
 }
 
-export function ShelfLifeInfo({ hours, onToggle, onEdit, align }: { hours: number | null; onToggle?: (open: boolean) => void; onEdit?: () => void; align?: 'right' }): React.JSX.Element {
+export function ShelfLifeInfo({ hours, open: controlledOpen, onToggle, onEdit, align }: { hours: number | null; open?: boolean; onToggle?: (open: boolean) => void; onEdit?: () => void; align?: 'right' }): React.JSX.Element {
   const [open, setOpen] = useState(false)
+
+  useEffect(() => {
+    if (controlledOpen !== undefined && controlledOpen !== open) {
+      setOpen(controlledOpen)
+    }
+  }, [controlledOpen])
 
   function toggle() {
     const next = !open

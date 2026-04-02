@@ -31,13 +31,13 @@ export function PrepRow({ item, initialLots, expiredLots, openMode, onSetMode, o
 
   return (
     <>
-      {editing && <EditPrepModal item={item} onClose={() => setEditing(false)} />}
+      {editing && <EditPrepModal item={item} onClose={() => { setEditing(false); setShowInfo(false) }} />}
       <tr className="border-b border-[#e5e3de] transition-colors hover:bg-[#fafaf8]">
         <td className="py-5 pr-6 align-middle">
           <div className="flex items-center gap-2">
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="text-lg font-semibold text-gray-900 leading-tight">{item.name}</span>
-              <ShelfLifeInfo hours={item.shelf_life_hours} onToggle={setShowInfo} onEdit={() => setEditing(true)} />
+              <ShelfLifeInfo hours={item.shelf_life_hours} open={showInfo} onToggle={setShowInfo} onEdit={() => setEditing(true)} />
             </div>
           </div>
         </td>
