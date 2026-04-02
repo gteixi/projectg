@@ -130,7 +130,7 @@ export function PrepRow({ item, initialLots, expiredLots, openMode, onSetMode, o
       {showInfo && (
         <tr className="border-b border-[#e5e3de]">
           <td colSpan={3} className="px-6 py-4 bg-[#fafaf8]">
-            <RecipePanel productionId={item.production_id} />
+            <RecipePanel productionId={item.production_id} kitchenUserId={item.kitchen_user_id} />
           </td>
         </tr>
       )}
@@ -152,12 +152,10 @@ export function PrepRow({ item, initialLots, expiredLots, openMode, onSetMode, o
             ) : openMode === 'move' ? (
               <MovePanel
                 productionId={item.production_id}
-                name={item.name}
                 unit={item.unit}
                 station={item.station}
                 initialLots={initialLots}
                 expiredLots={expiredLots}
-                onClose={() => onSetMode(null)}
                 onSuccess={() => onSetMode(null)}
               />
             ) : (

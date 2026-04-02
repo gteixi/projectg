@@ -34,7 +34,7 @@ export function PrepCard({ item, initialLots, expiredLots, openMode, onSetMode, 
       </div>
       {showInfo && (
         <div className="mb-4 p-3 rounded-lg bg-[#fafaf8]">
-          <RecipePanel productionId={item.production_id} />
+          <RecipePanel productionId={item.production_id} kitchenUserId={item.kitchen_user_id} />
         </div>
       )}
       <div className="mb-4">
@@ -163,12 +163,10 @@ export function PrepCard({ item, initialLots, expiredLots, openMode, onSetMode, 
         <div className="flex flex-col gap-2">
           <MovePanel
             productionId={item.production_id}
-            name={item.name}
             unit={item.unit}
             station={item.station}
             initialLots={initialLots}
             expiredLots={expiredLots}
-            onClose={() => onSetMode(null)}
             onSuccess={() => onSetMode(null)}
           />
           <button

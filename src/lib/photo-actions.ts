@@ -22,7 +22,8 @@ export async function uploadRecipePhoto(formData: FormData): Promise<{ path: str
 }
 
 export async function deleteRecipePhoto(path: string): Promise<{ error: string | null }> {
-  await requireAuth()
+  const session = await requireAuth()
+  if (!path.startsWith(`${session.userId}/`)) return { error: 'No tens permís per eliminar aquesta foto' }
   const supabase = await createServerClient()
   const { error } = await supabase.storage.from('recipe-photos').remove([path])
   if (error) return { error: error.message }

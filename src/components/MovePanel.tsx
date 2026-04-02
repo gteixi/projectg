@@ -35,16 +35,14 @@ const STATION_COLORS: Record<Station, { bg: string; border: string; text: string
 
 interface Props {
   productionId: string
-  name: string
   unit: string
   station: Station
   initialLots: ActiveLot[]
   expiredLots: ActiveLot[]
-  onClose: () => void
   onSuccess?: () => void
 }
 
-export function MovePanel({ productionId, name, unit, station, initialLots, expiredLots, onClose, onSuccess }: Props): React.JSX.Element {
+export function MovePanel({ productionId, unit, station, initialLots, expiredLots, onSuccess }: Props): React.JSX.Element {
   const router = useRouter()
   const { showToast } = useToast()
   const lots = [...initialLots, ...expiredLots]

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import { getRecipePhotoUrl } from '@/lib/photo-utils'
 
-export function RecipePanel({ productionId }: { productionId: string }): React.JSX.Element | null {
+export function RecipePanel({ productionId, kitchenUserId }: { productionId: string; kitchenUserId: string }): React.JSX.Element | null {
   const [recipe, setRecipe] = useState<string | null>(null)
   const [photos, setPhotos] = useState<string[]>([])
   const [loaded, setLoaded] = useState(false)
@@ -16,6 +16,7 @@ export function RecipePanel({ productionId }: { productionId: string }): React.J
       .from('productions')
       .select('recipe, recipe_photos')
       .eq('id', productionId)
+      .eq('kitchen_user_id', kitchenUserId)
       .single()
       .then(({ data }) => {
         if (data) {
@@ -24,7 +25,7 @@ export function RecipePanel({ productionId }: { productionId: string }): React.J
         }
         setLoaded(true)
       })
-  }, [productionId])
+  }, [productionId, kitchenUserId])
 
   if (!loaded) return null
 

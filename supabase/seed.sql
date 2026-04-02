@@ -32,6 +32,25 @@ insert into productions (id, name, unit, shelf_life_hours, station, active, kitc
   ('bbbbbbbb-0001-0001-0001-000000000011', 'Pan de Timbre',     'ud',   8, 'Timbre',     true, 'cccccccc-0001-0001-0001-000000000002'),
   ('bbbbbbbb-0001-0001-0001-000000000012', 'Focaccia',          'ud',  12, 'Timbre',     true, 'cccccccc-0001-0001-0001-000000000002');
 
+-- Recepta de prova per Salsa Brava
+update productions set
+  recipe = 'Ingredients:
+- 1kg tomaquets madurs
+- 2 bitxos de nyora
+- 3 grans d''all
+- 200ml oli d''oliva
+- 1 cullerada de pebre vermell
+- Sal i pebre al gust
+
+Preparacio:
+1. Torrar els tomaquets al forn a 200C durant 30 min
+2. Fregir els alls i les nyores a foc suau
+3. Triturar tot junt amb la batedora
+4. Afegir el pebre vermell i rectificar de sal
+5. Deixar refredar i envasar',
+  recipe_photos = ARRAY['test/salsa-brava-1.jpg', 'test/salsa-brava-2.jpg']
+where id = 'bbbbbbbb-0001-0001-0001-000000000001';
+
 -- ============================================================
 -- DEMO: PRODUCTION LOGS — 7 días de actividad
 -- Escenarios cubiertos:

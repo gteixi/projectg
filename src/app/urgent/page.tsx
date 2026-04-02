@@ -1,7 +1,8 @@
 import { requireAuth } from '@/lib/require-auth'
 import { createServerClient } from '@/lib/supabase'
 import { SidebarServer } from '@/components/SidebarServer'
-import { LoteCard, type LotResult } from '@/components/LoteCard'
+import { type LotResult } from '@/components/LoteCard'
+import { UrgentClient, type UrgentData } from '@/components/UrgentClient'
 import { URGENT_LOOKAHEAD_DAYS, LOCALE } from '@/lib/constants'
 
 export default async function UrgentPage(): Promise<React.JSX.Element> {
@@ -93,6 +94,8 @@ export default async function UrgentPage(): Promise<React.JSX.Element> {
   }
   const criticalDays = [...criticalByDay.values()]
 
+  const urgentData: UrgentData = { criticalDays, warning, tomorrow }
+
   return (
     <div className="flex min-h-screen">
       <SidebarServer />
@@ -105,57 +108,7 @@ export default async function UrgentPage(): Promise<React.JSX.Element> {
             </p>
           </header>
 
-          {lots.length === 0 ? (
-            <p className="text-center text-gray-400 text-lg py-16">Sense alertes urgents</p>
-          ) : (
-            <div className="flex flex-col gap-6">
-              {critical.length > 0 && (
-                <section>
-                  <h2 className="text-sm font-semibold uppercase tracking-wider text-red-600 mb-3">Caducats</h2>
-                  {criticalDays.length === 1 ? (
-                    <div className="flex flex-col gap-2">
-                      {criticalDays[0].lots.map((lot) => <LoteCard key={lot.id} lot={lot} variant="critical" showSale showExtend showMove />)}
-                    </div>
-                  ) : (
-                    <div className="flex flex-col gap-3">
-                      {criticalDays.map((group, i) => (
-                        <details key={group.label} open className="group rounded-xl bg-red-50 px-3 py-2">
-                          <summary className="flex items-center justify-between list-none cursor-pointer select-none [&::-webkit-details-marker]:hidden py-1">
-                            <span className="text-sm font-semibold text-red-600 capitalize">{group.label} <span className="text-red-400 font-normal">({group.lots.length})</span></span>
-                            <svg
-                              width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-                              className="text-red-400 transition-transform group-open:rotate-180"
-                            >
-                              <path d="m6 9 6 6 6-6" />
-                            </svg>
-                          </summary>
-                          <div className="flex flex-col gap-2 mt-2">
-                            {group.lots.map((lot) => <LoteCard key={lot.id} lot={lot} variant="critical" showSale showExtend showMove />)}
-                          </div>
-                        </details>
-                      ))}
-                    </div>
-                  )}
-                </section>
-              )}
-              {warning.length > 0 && (
-                <section>
-                  <h2 className="text-sm font-semibold uppercase tracking-wider text-yellow-600 mb-3">Caduca avui</h2>
-                  <div className="flex flex-col gap-2">
-                    {warning.map((lot) => <LoteCard key={lot.id} lot={lot} variant="warning" showSale showMove />)}
-                  </div>
-                </section>
-              )}
-              {tomorrow.length > 0 && (
-                <section>
-                  <h2 className="text-sm font-semibold uppercase tracking-wider text-blue-500 mb-3">Caduca demà</h2>
-                  <div className="flex flex-col gap-2">
-                    {tomorrow.map((lot) => <LoteCard key={lot.id} lot={lot} variant="tomorrow" showSale showMove />)}
-                  </div>
-                </section>
-              )}
-            </div>
-          )}
+          <UrgentClient data={urgentData} />
         </div>
       </main>
     </div>
