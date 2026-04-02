@@ -391,7 +391,7 @@ export function LoteCard({ lot, variant, showSale = false, showExtend = false, s
               <ExpiryBadge iso={lot.expires_at} />
             </span>
           </>
-        ) : lot.station === 'Congelador' ? (
+        ) : (
           <>
             <span className="shrink-0 sm:hidden">
               <FrozenDot />
@@ -400,7 +400,7 @@ export function LoteCard({ lot, variant, showSale = false, showExtend = false, s
               <FrozenBadge />
             </span>
           </>
-        ) : null}
+        )}
         <svg
           className={`w-4 h-4 text-gray-400 shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
           fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"
@@ -434,9 +434,7 @@ export function LoteCard({ lot, variant, showSale = false, showExtend = false, s
             <span className="text-sm font-medium text-gray-400 uppercase tracking-wide shrink-0">Caducitat</span>
             {lot.expires_at
               ? <ExpiryBadge iso={lot.expires_at} />
-              : lot.station === 'Congelador'
-                ? <FrozenBadge />
-                : <span className="text-sm text-gray-400">—</span>
+              : <FrozenBadge />
             }
           </div>
 
