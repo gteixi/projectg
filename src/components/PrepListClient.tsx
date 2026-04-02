@@ -21,18 +21,22 @@ const STATION_THEMES: Record<Station, StationTheme> = {
   Timbre:    { accentBorder: 'border-l-pink-500',   accentText: 'text-pink-700',   accentBg: 'bg-pink-50' },
 }
 
+function itemKey(item: StockActualHoy): string {
+  return `${item.production_id}:${item.station}`
+}
+
 type OpenMode = 'production' | 'sale' | 'move'
 type ActiveItem = { id: string; mode: OpenMode } | null
 type StockDelta = { productionId: string; delta: number }
 
-function StationCard({ station, items, lotsByProduction, expiredLotsByProduction, activeItem, onSetMode, onStockDelta }: {
+function StationCard({ station, items, lotsByKey, expiredLotsByKey, activeItem, onSetMode, onStockDelta }: {
   station: Station
   items: StockActualHoy[]
-  lotsByProduction: Record<string, ActiveLot[]>
-  expiredLotsByProduction: Record<string, ActiveLot[]>
+  lotsByKey: Record<string, ActiveLot[]>
+  expiredLotsByKey: Record<string, ActiveLot[]>
   activeItem: ActiveItem
   onSetMode: (id: string, mode: OpenMode | null) => void
-  onStockDelta: (productionId: string, delta: number) => void
+  onStockDelta: (id: string, delta: number) => void
 }): React.JSX.Element {
   const theme = STATION_THEMES[station]
 
@@ -49,17 +53,20 @@ function StationCard({ station, items, lotsByProduction, expiredLotsByProduction
       }
     >
       <div className="md:hidden">
-        {items.map((item) => (
-          <PrepCard
-            key={item.production_id}
-            item={item}
-            initialLots={lotsByProduction[item.production_id] ?? []}
-            expiredLots={expiredLotsByProduction[item.production_id] ?? []}
-            openMode={activeItem?.id === item.production_id ? activeItem.mode : null}
-            onSetMode={(mode) => onSetMode(item.production_id, mode)}
-            onStockDelta={(delta) => onStockDelta(item.production_id, delta)}
-          />
-        ))}
+        {items.map((item) => {
+          const key = itemKey(item)
+          return (
+            <PrepCard
+              key={key}
+              item={item}
+              initialLots={lotsByKey[key] ?? []}
+              expiredLots={expiredLotsByKey[key] ?? []}
+              openMode={activeItem?.id === key ? activeItem.mode : null}
+              onSetMode={(mode) => onSetMode(key, mode)}
+              onStockDelta={(delta) => onStockDelta(key, delta)}
+            />
+          )
+        })}
       </div>
       <div className="hidden md:block px-6 overflow-x-auto">
         <table className="w-full">
@@ -71,17 +78,20 @@ function StationCard({ station, items, lotsByProduction, expiredLotsByProduction
             </tr>
           </thead>
           <tbody>
-            {items.map((item) => (
-              <PrepRow
-                key={item.production_id}
-                item={item}
-                initialLots={lotsByProduction[item.production_id] ?? []}
-                expiredLots={expiredLotsByProduction[item.production_id] ?? []}
-                openMode={activeItem?.id === item.production_id ? activeItem.mode : null}
-                onSetMode={(mode) => onSetMode(item.production_id, mode)}
-                onStockDelta={(delta) => onStockDelta(item.production_id, delta)}
-              />
-            ))}
+            {items.map((item) => {
+              const key = itemKey(item)
+              return (
+                <PrepRow
+                  key={key}
+                  item={item}
+                  initialLots={lotsByKey[key] ?? []}
+                  expiredLots={expiredLotsByKey[key] ?? []}
+                  openMode={activeItem?.id === key ? activeItem.mode : null}
+                  onSetMode={(mode) => onSetMode(key, mode)}
+                  onStockDelta={(delta) => onStockDelta(key, delta)}
+                />
+              )
+            })}
           </tbody>
         </table>
       </div>
@@ -97,7 +107,7 @@ export function PrepListClient({ items, lotsByProduction, expiredLotsByProductio
     items,
     (state: StockActualHoy[], update: StockDelta) =>
       state.map((item) =>
-        item.production_id === update.productionId
+        itemKey(item) === update.productionId
           ? { ...item, stock_total: item.stock_total + update.delta }
           : item
       )
@@ -108,8 +118,8 @@ export function PrepListClient({ items, lotsByProduction, expiredLotsByProductio
     else setActiveItem({ id, mode })
   }
 
-  function handleStockDelta(productionId: string, delta: number): void {
-    addOptimistic({ productionId, delta })
+  function handleStockDelta(id: string, delta: number): void {
+    addOptimistic({ productionId: id, delta })
     setActiveItem(null)
   }
 
@@ -148,8 +158,8 @@ export function PrepListClient({ items, lotsByProduction, expiredLotsByProductio
             key={station}
             station={station}
             items={grouped[station]}
-            lotsByProduction={lotsByProduction}
-            expiredLotsByProduction={expiredLotsByProduction}
+            lotsByKey={lotsByProduction}
+            expiredLotsByKey={expiredLotsByProduction}
             activeItem={activeItem}
             onSetMode={handleSetMode}
             onStockDelta={handleStockDelta}

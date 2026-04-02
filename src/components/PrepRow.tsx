@@ -8,6 +8,7 @@ import { EditPrepModal } from './EditPrepModal'
 import { type StockActualHoy, type ActiveLot } from '@/types/database'
 import { truncUnit } from '@/lib/format'
 import { ShelfLifeInfo } from '@/components/ShelfLifeInfo'
+import { RecipePanel } from '@/components/RecipePanel'
 import { LotList } from '@/components/LotList'
 
 type OpenMode = 'production' | 'sale' | 'move' | null
@@ -22,6 +23,7 @@ export function PrepRow({ item, initialLots, expiredLots, openMode, onSetMode, o
 }): React.JSX.Element {
   const [editing, setEditing] = useState(false)
   const [showLots, setShowLots] = useState(false)
+  const [showInfo, setShowInfo] = useState(false)
 
   function toggle(mode: 'production' | 'sale' | 'move'): void {
     onSetMode(openMode === mode ? null : mode)
@@ -35,7 +37,7 @@ export function PrepRow({ item, initialLots, expiredLots, openMode, onSetMode, o
           <div className="flex items-center gap-2">
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="text-lg font-semibold text-gray-900 leading-tight">{item.name}</span>
-              <ShelfLifeInfo hours={item.shelf_life_hours} productionId={item.production_id} onEdit={() => setEditing(true)} />
+              <ShelfLifeInfo hours={item.shelf_life_hours} onToggle={setShowInfo} onEdit={() => setEditing(true)} />
             </div>
           </div>
         </td>
@@ -122,6 +124,13 @@ export function PrepRow({ item, initialLots, expiredLots, openMode, onSetMode, o
         <tr className="border-b border-[#e5e3de]">
           <td colSpan={3} className="px-6 py-3 bg-[#fafaf8]">
             <LotList lots={[...initialLots, ...expiredLots]} unit={item.unit} />
+          </td>
+        </tr>
+      )}
+      {showInfo && (
+        <tr className="border-b border-[#e5e3de]">
+          <td colSpan={3} className="px-6 py-4 bg-[#fafaf8]">
+            <RecipePanel productionId={item.production_id} />
           </td>
         </tr>
       )}

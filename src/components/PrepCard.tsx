@@ -8,6 +8,7 @@ import { EditPrepModal } from './EditPrepModal'
 import { type StockActualHoy, type ActiveLot } from '@/types/database'
 import { truncUnit } from '@/lib/format'
 import { ShelfLifeInfo } from '@/components/ShelfLifeInfo'
+import { RecipePanel } from '@/components/RecipePanel'
 import { LotList } from '@/components/LotList'
 
 type OpenMode = 'production' | 'sale' | 'move' | null
@@ -22,14 +23,20 @@ export function PrepCard({ item, initialLots, expiredLots, openMode, onSetMode, 
 }): React.JSX.Element {
   const [editing, setEditing] = useState(false)
   const [showLots, setShowLots] = useState(false)
+  const [showInfo, setShowInfo] = useState(false)
 
   return (
     <div className="px-4 py-5 border-b border-[#e5e3de] last:border-0">
       {editing && <EditPrepModal item={item} onClose={() => setEditing(false)} />}
       <div className="mb-4 flex flex-wrap items-center gap-1.5">
         <span className="text-lg font-semibold text-gray-900 leading-tight">{item.name}</span>
-        <ShelfLifeInfo hours={item.shelf_life_hours} productionId={item.production_id} onEdit={() => setEditing(true)} align="right" />
+        <ShelfLifeInfo hours={item.shelf_life_hours} onToggle={setShowInfo} onEdit={() => setEditing(true)} align="right" />
       </div>
+      {showInfo && (
+        <div className="mb-4 p-3 rounded-lg bg-[#fafaf8]">
+          <RecipePanel productionId={item.production_id} />
+        </div>
+      )}
       <div className="mb-4">
         {(() => {
           const expiredStock = expiredLots.reduce((sum, l) => sum + l.quantity, 0)

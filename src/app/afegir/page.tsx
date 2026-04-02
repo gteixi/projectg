@@ -55,6 +55,19 @@ export default async function Home(): Promise<React.JSX.Element> {
 
   const items = (stockResult.data ?? []) as StockActualHoy[]
 
+  // Build a map of production station (from items) for each production_id
+  const prodDefaultStation = new Map<string, string>()
+  for (const item of items) {
+    if (!prodDefaultStation.has(item.production_id)) {
+      prodDefaultStation.set(item.production_id, item.station)
+    }
+  }
+
+  // Key: "production_id:station" to match lots to the correct daily_stock row
+  function compositeKey(productionId: string, station: string): string {
+    return `${productionId}:${station}`
+  }
+
   function buildLotsMap(logs: typeof logsResult.data): Record<string, ActiveLot[]> {
     const map: Record<string, ActiveLot[]> = {}
     for (const l of logs ?? []) {
@@ -63,8 +76,10 @@ export default async function Home(): Promise<React.JSX.Element> {
       const remaining = produced - exited
       if (remaining <= 0) continue
       const pid = l.production_id as string
-      if (!map[pid]) map[pid] = []
-      map[pid].push({
+      const effectiveStation = (l.current_station as string | null) ?? prodDefaultStation.get(pid) ?? ''
+      const key = compositeKey(pid, effectiveStation)
+      if (!map[key]) map[key] = []
+      map[key].push({
         log_id: l.id as string,
         batch_number: l.batch_number as string,
         quantity: remaining,
