@@ -11,6 +11,22 @@ export async function extendLotToEndOfDay(
   const session = await requireAuth()
   const supabase = await createServerClient()
 
+  // Verify the lot is not frozen
+  const { data: log } = await supabase
+    .from('production_logs')
+    .select('current_station, productions!inner(station)')
+    .eq('id', logId)
+    .eq('kitchen_user_id', session.userId)
+    .single()
+
+  if (!log) return { error: 'Lot no trobat' }
+
+  const prod = Array.isArray(log.productions) ? log.productions[0] : log.productions
+  const effectiveStation = log.current_station ?? prod.station
+  if (effectiveStation === 'Congelador') {
+    return { error: 'No es pot ampliar un lot congelat' }
+  }
+
   const now = new Date()
   const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59)
 

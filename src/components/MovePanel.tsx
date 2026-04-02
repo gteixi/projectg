@@ -37,18 +37,28 @@ interface Props {
   productionId: string
   unit: string
   station: Station
+  shelfLifeHours: number | null
   initialLots: ActiveLot[]
   expiredLots: ActiveLot[]
   onSuccess?: () => void
 }
 
-export function MovePanel({ productionId, unit, station, initialLots, expiredLots, onSuccess }: Props): React.JSX.Element {
+const EXPIRY_PRESETS = [
+  { label: '12h', hours: 12 },
+  { label: '24h', hours: 24 },
+  { label: '48h', hours: 48 },
+  { label: '72h', hours: 72 },
+]
+
+export function MovePanel({ productionId, unit, station, shelfLifeHours, initialLots, expiredLots, onSuccess }: Props): React.JSX.Element {
   const router = useRouter()
   const { showToast } = useToast()
   const lots = [...initialLots, ...expiredLots]
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [targetStation, setTargetStation] = useState<Station | null>(null)
   const [pending, startTransition] = useTransition()
+  const [showExpiryPrompt, setShowExpiryPrompt] = useState(false)
+  const [customHours, setCustomHours] = useState('')
 
   const selectedLots = lots.filter((l) => selected.has(l.log_id))
   const effectiveStations = new Set(selectedLots.length > 0
@@ -72,13 +82,33 @@ export function MovePanel({ productionId, unit, station, initialLots, expiredLot
     else setSelected(new Set(lots.map((l) => l.log_id)))
   }
 
+  function needsExpiryPrompt(): boolean {
+    if (!validTarget || validTarget === 'Congelador') return false
+    if (shelfLifeHours) return false
+    const selectedList = lots.filter((l) => selected.has(l.log_id))
+    return selectedList.some((l) => {
+      const eff = l.current_station ?? station
+      return eff === 'Congelador' && l.expires_at === null
+    })
+  }
+
   function handleSubmit(): void {
     if (!validTarget || selected.size === 0) return
+    if (needsExpiryPrompt()) {
+      setShowExpiryPrompt(true)
+      return
+    }
+    doMove()
+  }
+
+  function doMove(expiryHours?: number): void {
+    if (!validTarget) return
     startTransition(async () => {
-      const result = await moveLots(productionId, [...selected], validTarget)
+      const result = await moveLots(productionId, [...selected], validTarget, expiryHours)
       if (result.error) {
         showToast(`Error movent lots: ${result.error}`)
       } else {
+        setShowExpiryPrompt(false)
         onSuccess?.()
         router.refresh()
       }
@@ -108,8 +138,9 @@ export function MovePanel({ productionId, unit, station, initialLots, expiredLot
 
       <div className="flex flex-col gap-1.5">
         {lots.map((lot) => {
-          const frozen = lot.expires_at === null
-          const s = frozen ? null : expirySemaphore(lot.expires_at!)
+          const frozen = (lot.current_station ?? station) === 'Congelador'
+          const hasExpiry = !frozen && lot.expires_at != null
+          const s = hasExpiry ? expirySemaphore(lot.expires_at!) : null
           const isSelected = selected.has(lot.log_id)
           return (
             <button
@@ -117,7 +148,7 @@ export function MovePanel({ productionId, unit, station, initialLots, expiredLot
               onClick={() => toggleLot(lot.log_id)}
               disabled={pending}
               className={`flex items-center gap-3 py-2.5 px-3 rounded-lg border border-l-[3px] transition-colors disabled:opacity-50 ${
-                frozen ? 'border-l-blue-400/30' : borderColor[s!]
+                frozen ? 'border-l-blue-400/30' : s ? borderColor[s] : 'border-l-gray-300/30'
               } ${isSelected ? 'bg-blue-50 border-blue-300' : 'bg-white border-[#e5e3de]/60'}`}
             >
               <span className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
@@ -129,7 +160,7 @@ export function MovePanel({ productionId, unit, station, initialLots, expiredLot
                   </svg>
                 )}
               </span>
-              <span className={`w-2 h-2 rounded-full shrink-0 ${frozen ? 'bg-blue-500' : dotColor[s!]}`} />
+              <span className={`w-2 h-2 rounded-full shrink-0 ${frozen ? 'bg-blue-500' : s ? dotColor[s] : 'bg-gray-300'}`} />
               <div className="flex-1 min-w-0 text-left">
                 <div className="flex items-center gap-1">
                   <span className="text-xs text-gray-500">Lote</span>
@@ -137,7 +168,9 @@ export function MovePanel({ productionId, unit, station, initialLots, expiredLot
                 </div>
                 {frozen
                   ? <div className="text-xs text-blue-600 font-semibold">Congelat</div>
-                  : <div className={`text-xs ${textColor[s!]}`}>{formatExpiry(lot.expires_at!)}</div>
+                  : hasExpiry
+                    ? <div className={`text-xs ${textColor[s!]}`}>{formatExpiry(lot.expires_at!)}</div>
+                    : <div className="text-xs text-gray-400">Sense caducitat</div>
                 }
               </div>
               <span className="text-sm font-semibold text-gray-800 tabular-nums shrink-0">{lot.quantity} {unitLabel}</span>
@@ -192,6 +225,53 @@ export function MovePanel({ productionId, unit, station, initialLots, expiredLot
       >
         {pending ? 'Movent...' : `Moure ${selectedCount} lot${selectedCount !== 1 ? 's' : ''}`}
       </button>
+
+      {showExpiryPrompt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl w-[90vw] max-w-sm p-5 flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-gray-900">Caducitat al descongelar</h3>
+              <button onClick={() => setShowExpiryPrompt(false)} className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+              </button>
+            </div>
+            <p className="text-sm text-gray-500">Aquesta producció no té vida útil definida. Quantes hores de caducitat vols assignar?</p>
+            <div className="flex gap-2">
+              {EXPIRY_PRESETS.map((p) => (
+                <button
+                  key={p.hours}
+                  onClick={() => doMove(p.hours)}
+                  disabled={pending}
+                  className="flex-1 h-12 rounded-xl bg-gray-100 text-base font-semibold text-gray-700 hover:bg-gray-200 disabled:opacity-50 transition-colors"
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="number"
+                inputMode="numeric"
+                min="1"
+                placeholder="Hores"
+                value={customHours}
+                onChange={(e) => setCustomHours(e.target.value)}
+                className="flex-1 h-12 rounded-xl border border-gray-300 px-4 text-base text-gray-900 placeholder:text-gray-400"
+              />
+              <button
+                onClick={() => {
+                  const h = Number(customHours)
+                  if (h > 0) doMove(h)
+                }}
+                disabled={pending || !customHours || Number(customHours) <= 0}
+                className="h-12 px-5 rounded-xl bg-blue-600 text-white text-base font-semibold hover:bg-blue-700 disabled:opacity-40 transition-colors"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

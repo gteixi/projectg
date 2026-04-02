@@ -382,7 +382,16 @@ export function LoteCard({ lot, variant, showSale = false, showExtend = false, s
         <span className="flex-1 text-base font-bold text-gray-900 truncate min-w-0">
           {lot.preparation_name}
         </span>
-        {lot.expires_at ? (
+        {lot.station === 'Congelador' ? (
+          <>
+            <span className="shrink-0 sm:hidden">
+              <FrozenDot />
+            </span>
+            <span className="shrink-0 hidden sm:block">
+              <FrozenBadge />
+            </span>
+          </>
+        ) : lot.expires_at ? (
           <>
             <span className="shrink-0 sm:hidden">
               <ExpiryDot iso={lot.expires_at} />
@@ -392,14 +401,7 @@ export function LoteCard({ lot, variant, showSale = false, showExtend = false, s
             </span>
           </>
         ) : (
-          <>
-            <span className="shrink-0 sm:hidden">
-              <FrozenDot />
-            </span>
-            <span className="shrink-0 hidden sm:block">
-              <FrozenBadge />
-            </span>
-          </>
+          <span className="shrink-0 text-sm text-gray-400">—</span>
         )}
         <svg
           className={`w-4 h-4 text-gray-400 shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
@@ -432,9 +434,11 @@ export function LoteCard({ lot, variant, showSale = false, showExtend = false, s
 
           <div className="flex items-center justify-between gap-3 px-5 py-3">
             <span className="text-sm font-medium text-gray-400 uppercase tracking-wide shrink-0">Caducitat</span>
-            {lot.expires_at
-              ? <ExpiryBadge iso={lot.expires_at} />
-              : <FrozenBadge />
+            {lot.station === 'Congelador'
+              ? <FrozenBadge />
+              : lot.expires_at
+                ? <ExpiryBadge iso={lot.expires_at} />
+                : <span className="text-sm text-gray-400">Sense caducitat</span>
             }
           </div>
 

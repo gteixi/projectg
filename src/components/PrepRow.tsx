@@ -154,6 +154,7 @@ export function PrepRow({ item, initialLots, expiredLots, openMode, onSetMode, o
                 productionId={item.production_id}
                 unit={item.unit}
                 station={item.station}
+                shelfLifeHours={item.shelf_life_hours}
                 initialLots={initialLots}
                 expiredLots={expiredLots}
                 onSuccess={() => onSetMode(null)}

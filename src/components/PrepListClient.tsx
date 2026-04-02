@@ -52,36 +52,15 @@ function StationCard({ station, items, lotsByKey, expiredLotsByKey, activeItem, 
         </span>
       }
     >
-      <div className="md:hidden">
-        {items.map((item) => {
-          const key = itemKey(item)
-          return (
-            <PrepCard
-              key={key}
-              item={item}
-              initialLots={lotsByKey[key] ?? []}
-              expiredLots={expiredLotsByKey[key] ?? []}
-              openMode={activeItem?.id === key ? activeItem.mode : null}
-              onSetMode={(mode) => onSetMode(key, mode)}
-              onStockDelta={(delta) => onStockDelta(key, delta)}
-            />
-          )
-        })}
-      </div>
-      <div className="hidden md:block px-6 overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-[#e5e3de]">
-              <th className="py-3 pr-6 text-left text-sm font-semibold uppercase tracking-wider text-gray-400">Producció</th>
-              <th className="py-3 px-4 text-right text-sm font-semibold uppercase tracking-wider text-gray-400">Stock</th>
-              <th className="py-3 pl-3 text-center text-sm font-semibold uppercase tracking-wider text-gray-400 w-[380px]">Registrar</th>
-            </tr>
-          </thead>
-          <tbody>
+      {items.length === 0 ? (
+        <p className="text-center text-gray-400 text-sm italic py-8">Encara no hi ha produccions en aquesta secció</p>
+      ) : (
+        <>
+          <div className="md:hidden">
             {items.map((item) => {
               const key = itemKey(item)
               return (
-                <PrepRow
+                <PrepCard
                   key={key}
                   item={item}
                   initialLots={lotsByKey[key] ?? []}
@@ -92,9 +71,36 @@ function StationCard({ station, items, lotsByKey, expiredLotsByKey, activeItem, 
                 />
               )
             })}
-          </tbody>
-        </table>
-      </div>
+          </div>
+          <div className="hidden md:block px-6 overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-[#e5e3de]">
+                  <th className="py-3 pr-6 text-left text-sm font-semibold uppercase tracking-wider text-gray-400">Producció</th>
+                  <th className="py-3 px-4 text-right text-sm font-semibold uppercase tracking-wider text-gray-400">Stock</th>
+                  <th className="py-3 pl-3 text-center text-sm font-semibold uppercase tracking-wider text-gray-400 w-[380px]">Registrar</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((item) => {
+                  const key = itemKey(item)
+                  return (
+                    <PrepRow
+                      key={key}
+                      item={item}
+                      initialLots={lotsByKey[key] ?? []}
+                      expiredLots={expiredLotsByKey[key] ?? []}
+                      openMode={activeItem?.id === key ? activeItem.mode : null}
+                      onSetMode={(mode) => onSetMode(key, mode)}
+                      onStockDelta={(delta) => onStockDelta(key, delta)}
+                    />
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
     </CollapsibleStation>
   )
 }
@@ -126,9 +132,18 @@ export function PrepListClient({ items, lotsByProduction, expiredLotsByProductio
   const normalize = (s: string): string =>
     s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
 
+  const hasLotsHere = (i: StockActualHoy): boolean => {
+    const key = itemKey(i)
+    return i.stock_total > 0
+      || (lotsByProduction[key]?.length ?? 0) > 0
+      || (expiredLotsByProduction[key]?.length ?? 0) > 0
+  }
+  const existsElsewhere = (i: StockActualHoy): boolean =>
+    optimisticItems.some((other) => other.production_id === i.production_id && other.station !== i.station && hasLotsHere(other))
+  const withLots = optimisticItems.filter((i) => hasLotsHere(i) || !existsElsewhere(i))
   const filtered = query.trim()
-    ? optimisticItems.filter((i) => normalize(i.name).includes(normalize(query)))
-    : optimisticItems
+    ? withLots.filter((i) => normalize(i.name).includes(normalize(query)))
+    : withLots
 
   const grouped = STATIONS.reduce<Record<Station, StockActualHoy[]>>(
     (acc, station) => {
@@ -137,8 +152,6 @@ export function PrepListClient({ items, lotsByProduction, expiredLotsByProductio
     },
     {} as Record<Station, StockActualHoy[]>
   )
-
-  const visibleStations = STATIONS.filter((s) => grouped[s].length > 0)
 
   return (
     <>
@@ -153,7 +166,7 @@ export function PrepListClient({ items, lotsByProduction, expiredLotsByProductio
       </div>
 
       <div className="flex flex-col gap-4 md:gap-5">
-        {visibleStations.map((station) => (
+        {STATIONS.map((station) => (
           <StationCard
             key={station}
             station={station}

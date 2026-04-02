@@ -10,6 +10,7 @@ export async function moveLots(
   productionId: string,
   logIds: string[],
   targetStation: Station,
+  unfreezeExpiryHours?: number,
 ): Promise<ActionResult> {
   const session = await requireAuth()
   if (logIds.length === 0) return { error: 'Cap lot seleccionat' }
@@ -27,7 +28,7 @@ export async function moveLots(
 
   const { data: logs } = await supabase
     .from('production_logs')
-    .select('id, current_station, batch_number, quantity')
+    .select('id, current_station, batch_number, quantity, expires_at, frozen_remaining_hours')
     .in('id', logIds)
     .eq('production_id', productionId)
     .eq('kitchen_user_id', session.userId)
@@ -71,28 +72,48 @@ export async function moveLots(
     }
   }
 
-  // Batch: freeze (set expires_at = NULL)
+  // Freeze: store remaining shelf life, then set expires_at = NULL
   if (freezeLotIds.length > 0) {
-    const { error } = await supabase
-      .from('production_logs')
-      .update({ current_station: newCurrentStation, expires_at: null })
-      .in('id', freezeLotIds)
-      .eq('kitchen_user_id', session.userId)
-    if (error) return { error: error.message }
+    for (const log of logs.filter((l) => freezeLotIds.includes(l.id))) {
+      const remainingHours = log.expires_at
+        ? Math.max(0, (new Date(log.expires_at).getTime() - now.getTime()) / MS_PER_HOUR)
+        : null
+      const { error } = await supabase
+        .from('production_logs')
+        .update({
+          current_station: newCurrentStation,
+          expires_at: null,
+          frozen_remaining_hours: remainingHours,
+        })
+        .eq('id', log.id)
+        .eq('kitchen_user_id', session.userId)
+      if (error) return { error: error.message }
+    }
   }
 
-  // Batch: unfreeze (recalculate expires_at)
+  // Unfreeze: restore expires_at from frozen_remaining_hours (or fall back to full shelf life)
   if (unfreezeLotIds.length > 0) {
-    const newExpiresAt = prod.shelf_life_hours
-      ? new Date(now.getTime() + prod.shelf_life_hours * MS_PER_HOUR).toISOString()
-      : new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59).toISOString()
+    for (const log of logs.filter((l) => unfreezeLotIds.includes(l.id))) {
+      const savedHours = log.frozen_remaining_hours != null
+        ? Number(log.frozen_remaining_hours)
+        : null
 
-    const { error } = await supabase
-      .from('production_logs')
-      .update({ current_station: newCurrentStation, expires_at: newExpiresAt })
-      .in('id', unfreezeLotIds)
-      .eq('kitchen_user_id', session.userId)
-    if (error) return { error: error.message }
+      const hours = savedHours ?? prod.shelf_life_hours ?? unfreezeExpiryHours ?? null
+      const newExpiresAt = hours != null
+        ? new Date(now.getTime() + hours * MS_PER_HOUR).toISOString()
+        : null
+
+      const { error } = await supabase
+        .from('production_logs')
+        .update({
+          current_station: newCurrentStation,
+          expires_at: newExpiresAt,
+          frozen_remaining_hours: null,
+        })
+        .eq('id', log.id)
+        .eq('kitchen_user_id', session.userId)
+      if (error) return { error: error.message }
+    }
   }
 
   // Batch: simple move (no expiry change)

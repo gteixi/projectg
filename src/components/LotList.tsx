@@ -29,12 +29,13 @@ export function LotList({ lots, unit }: { lots: ActiveLot[]; unit: string }): Re
   return (
     <ul className="flex flex-col gap-1.5">
       {lots.map((lot) => {
-        const frozen = lot.expires_at === null
-        const s = frozen ? null : expirySemaphore(lot.expires_at!)
+        const frozen = lot.current_station === 'Congelador'
+        const hasExpiry = !frozen && lot.expires_at != null
+        const s = hasExpiry ? expirySemaphore(lot.expires_at!) : null
         return (
-          <li key={lot.log_id} className={`grid grid-cols-[1fr_auto] items-center text-sm py-2 px-3 rounded-lg border border-[#e5e3de]/60 border-l-[3px] ${frozen ? 'border-l-blue-400/30' : borderColor[s!]} bg-white`}>
+          <li key={lot.log_id} className={`grid grid-cols-[1fr_auto] items-center text-sm py-2 px-3 rounded-lg border border-[#e5e3de]/60 border-l-[3px] ${frozen ? 'border-l-blue-400/30' : s ? borderColor[s] : 'border-l-gray-300/30'} bg-white`}>
             <span className="flex items-center gap-2">
-              <span className={`w-2 h-2 rounded-full shrink-0 ${frozen ? 'bg-blue-500' : dotColor[s!]}`} />
+              <span className={`w-2 h-2 rounded-full shrink-0 ${frozen ? 'bg-blue-500' : s ? dotColor[s] : 'bg-gray-300'}`} />
               <span className="text-xs text-gray-500">Lote</span>
               <span className="text-xs font-mono font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-2 py-0.5">#{lot.batch_number}</span>
             </span>
@@ -42,7 +43,9 @@ export function LotList({ lots, unit }: { lots: ActiveLot[]; unit: string }): Re
               <span className="font-semibold text-gray-800 tabular-nums">{lot.quantity} {truncUnit(unit)}</span>
               {frozen
                 ? <span className="text-xs text-blue-600 font-semibold">Congelat</span>
-                : <span className={`text-xs ${textColor[s!]}`}>{formatExpiry(lot.expires_at!)}</span>
+                : hasExpiry
+                  ? <span className={`text-xs ${textColor[s!]}`}>{formatExpiry(lot.expires_at!)}</span>
+                  : <span className="text-xs text-gray-400">Sense caducitat</span>
               }
             </div>
           </li>
