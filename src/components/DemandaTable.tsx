@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { type Station } from '@/types/database'
 
 const STATION_COLORS: Record<Station, string> = {
@@ -56,11 +56,14 @@ export function DemandaTable({ rows }: { rows: DemandaRow[] }): React.JSX.Elemen
     }
   }
 
-  const sorted = [...rows].sort((a, b) => {
-    const mul = sortDir === 'asc' ? 1 : -1
-    if (sortKey === 'name') return mul * a.name.localeCompare(b.name)
-    return mul * (a[sortKey] - b[sortKey])
-  })
+  const sorted = useMemo(() =>
+    [...rows].sort((a, b) => {
+      const mul = sortDir === 'asc' ? 1 : -1
+      if (sortKey === 'name') return mul * a.name.localeCompare(b.name)
+      return mul * (a[sortKey] - b[sortKey])
+    }),
+    [rows, sortKey, sortDir]
+  )
 
   return (
     <>

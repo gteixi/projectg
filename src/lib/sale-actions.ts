@@ -5,15 +5,19 @@ import { createServerClient } from '@/lib/supabase'
 import { requireAuth } from '@/lib/require-auth'
 import { type SaleReason, type ExitReason, type ActiveLot, type FifoBreakdown, type ActionResult } from '@/types/database'
 import { fetchExitedByBatch } from '@/lib/stock-helpers'
+import { saleExitSchema, getRecipeSchema } from '@/lib/validation'
 
 export async function getActiveLots(
   productionId: string
 ): Promise<{ lots: ActiveLot[]; error: string | null }> {
+  const parsed = getRecipeSchema.safeParse({ productionId })
+  if (!parsed.success) return { lots: [], error: 'Dades invàlides' }
+
   const session = await requireAuth()
   const supabase = await createServerClient()
 
   const todayStart = new Date()
-  todayStart.setHours(0, 0, 0, 0)
+  todayStart.setUTCHours(0, 0, 0, 0)
 
   const logsResult = await supabase
     .from('production_logs')
@@ -56,21 +60,26 @@ export async function createSaleExit(
   lots: FifoBreakdown[],
   exitReason?: ExitReason | null,
 ): Promise<ActionResult> {
+  const parsed = saleExitSchema.safeParse({
+    productionId, quantity, reason, lots, exitReason: exitReason ?? null,
+  })
+  if (!parsed.success) return { error: 'Dades invàlides' }
+
   const session = await requireAuth()
   const supabase = await createServerClient()
 
   const { error } = await supabase.rpc('create_sale_exit', {
-    p_production_id: productionId,
-    p_quantity: quantity,
-    p_reason: reason,
+    p_production_id: parsed.data.productionId,
+    p_quantity: parsed.data.quantity,
+    p_reason: parsed.data.reason,
     p_kitchen_user_id: session.userId,
-    p_lots: lots.map((l) => ({ batch_number: l.batch_number, quantity: l.quantity })),
-    p_exit_reason: exitReason ?? null,
+    p_lots: parsed.data.lots.map((l) => ({ batch_number: l.batch_number, quantity: l.quantity })),
+    p_exit_reason: parsed.data.exitReason ?? null,
   })
 
   if (error) return { error: error.message }
 
-  revalidatePath('/afegir', 'page')
+  revalidatePath('/produccions', 'page')
   revalidatePath('/urgent', 'page')
   revalidatePath('/historial', 'page')
   revalidatePath('/informe', 'page')

@@ -14,12 +14,15 @@ function UrgentIcon() {
   )
 }
 
-function AddIcon() {
+function NotebookIcon() {
   return (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="10" />
-      <line x1="12" y1="8" x2="12" y2="16" />
-      <line x1="8" y1="12" x2="16" y2="12" />
+      <path d="M2 6h4" />
+      <path d="M2 10h4" />
+      <path d="M2 14h4" />
+      <path d="M2 18h4" />
+      <rect x="4" y="2" width="16" height="20" rx="2" />
+      <line x1="12" y1="2" x2="12" y2="22" />
     </svg>
   )
 }
@@ -142,7 +145,7 @@ function LogoutButton() {
 export function Sidebar({ urgentCount = 0 }: { urgentCount?: number }) {
   const pathname = usePathname()
   const isUrgent = pathname.startsWith('/urgent')
-  const isAfegir = pathname.startsWith('/afegir')
+  const isProduccions = pathname.startsWith('/produccions')
   const isHistorial = pathname.startsWith('/historial')
   const isTrazabilidad = pathname.startsWith('/trazabilidad')
   const isInforme = pathname.startsWith('/informe')
@@ -152,7 +155,7 @@ export function Sidebar({ urgentCount = 0 }: { urgentCount?: number }) {
       {/* Desktop/tablet sidebar — left */}
       <aside className="hidden md:flex fixed left-0 top-0 h-full w-[120px] bg-gray-900 flex-col items-center pt-6 pb-4 z-20 gap-2 px-3">
         <NavItem href="/urgent" icon={<UrgentBadge count={urgentCount} />} label="Urgent" active={isUrgent} />
-        <NavItem href="/afegir" icon={<AddIcon />} label="Afegir" active={isAfegir} />
+        <NavItem href="/produccions" icon={<NotebookIcon />} label="Produccions" active={isProduccions} />
         <NavItem href="/trazabilidad" icon={<LoteIcon />} label="Lote" active={isTrazabilidad} />
         <NavItem href="/historial" icon={<CalendarIcon />} label="Historial" active={isHistorial} />
         <NavItem href="/informe" icon={<ChartIcon />} label="Informe" active={isInforme} />
@@ -164,22 +167,22 @@ export function Sidebar({ urgentCount = 0 }: { urgentCount?: number }) {
       <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-gray-900/95 backdrop-blur-md flex items-center z-50 border-t border-white/[0.06] transform-gpu">
         <MobileNavItem href="/urgent" icon={<UrgentBadge count={urgentCount} />} label="Urgent" active={isUrgent} />
         <MobileNavItem href="/trazabilidad" icon={<LoteIcon />} label="Lote" active={isTrazabilidad} />
-        {/* Center FAB — Afegir */}
+        {/* Center FAB — Produccions */}
         <div className="flex-1 flex justify-center">
           <Link
-            href="/afegir"
+            href="/produccions"
             className="flex flex-col items-center -mt-7"
           >
             <span className={`flex items-center justify-center w-14 h-14 rounded-full border border-white/[0.08] transition-all duration-200 ${
-              isAfegir
+              isProduccions
                 ? 'bg-gray-800 text-white shadow-[0_4px_12px_rgba(0,0,0,0.4)]'
                 : 'bg-gray-800 text-gray-400 shadow-[0_4px_12px_rgba(0,0,0,0.4)]'
             }`}>
-              <AddIcon />
+              <NotebookIcon />
             </span>
             <span className={`text-[10px] font-semibold mt-1.5 transition-colors duration-200 ${
-              isAfegir ? 'text-white' : 'text-gray-400'
-            }`}>Afegir</span>
+              isProduccions ? 'text-white' : 'text-gray-400'
+            }`}>Produccions</span>
           </Link>
         </div>
         <MobileNavItem href="/historial" icon={<CalendarIcon />} label="Historial" active={isHistorial} />

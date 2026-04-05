@@ -29,6 +29,7 @@ export function CollapsibleStation({
     >
       <button
         type="button"
+        aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
         className={`w-full px-5 py-5 flex items-center justify-between ${accentBg} transition-colors ${
           open ? 'border-b border-[#e5e3de]' : ''

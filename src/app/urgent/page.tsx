@@ -11,11 +11,11 @@ export default async function UrgentPage(): Promise<React.JSX.Element> {
   const supabase = await createServerClient()
 
   const now = new Date()
-  const startOfDayAfterTomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + URGENT_LOOKAHEAD_DAYS).toISOString()
+  const startOfDayAfterTomorrow = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + URGENT_LOOKAHEAD_DAYS)).toISOString()
 
   const logsResult = await supabase
     .from('production_logs')
-    .select('id, production_id, quantity, logged_at, expires_at, batch_number, productions!inner(name, unit, station)')
+    .select('id, production_id, quantity, logged_at, expires_at, batch_number, current_station, productions!inner(name, unit, station)')
     .eq('kitchen_user_id', session.userId)
     .not('batch_number', 'is', null)
     .not('expires_at', 'is', null)
@@ -55,7 +55,7 @@ export default async function UrgentPage(): Promise<React.JSX.Element> {
       quantity: remaining,
       logged_at: row.logged_at,
       expires_at: row.expires_at,
-      station: prod.station,
+      station: (row.current_station as string | null) ?? prod.station,
       bucket,
     })
   }

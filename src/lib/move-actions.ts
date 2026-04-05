@@ -5,6 +5,7 @@ import { createServerClient } from '@/lib/supabase'
 import { requireAuth } from '@/lib/require-auth'
 import { type Station, type ActionResult } from '@/types/database'
 import { MS_PER_HOUR } from '@/lib/constants'
+import { moveLotsSchema } from '@/lib/validation'
 
 export async function moveLots(
   productionId: string,
@@ -12,9 +13,10 @@ export async function moveLots(
   targetStation: Station,
   unfreezeExpiryHours?: number,
 ): Promise<ActionResult> {
-  const session = await requireAuth()
-  if (logIds.length === 0) return { error: 'Cap lot seleccionat' }
+  const parsed = moveLotsSchema.safeParse({ productionId, logIds, targetStation, unfreezeExpiryHours })
+  if (!parsed.success) return { error: 'Dades invàlides' }
 
+  const session = await requireAuth()
   const supabase = await createServerClient()
 
   const { data: prod } = await supabase
@@ -73,11 +75,20 @@ export async function moveLots(
   }
 
   // Freeze: store remaining shelf life, then set expires_at = NULL
+  // Group by frozen_remaining_hours to batch updates where possible
   if (freezeLotIds.length > 0) {
-    for (const log of logs.filter((l) => freezeLotIds.includes(l.id))) {
+    const freezeLogs = logs.filter((l) => freezeLotIds.includes(l.id))
+    const byHours = new Map<string, string[]>()
+    for (const log of freezeLogs) {
       const remainingHours = log.expires_at
         ? Math.max(0, (new Date(log.expires_at).getTime() - now.getTime()) / MS_PER_HOUR)
         : null
+      const key = String(remainingHours)
+      if (!byHours.has(key)) byHours.set(key, [])
+      byHours.get(key)!.push(log.id)
+    }
+    for (const [hoursKey, ids] of byHours) {
+      const remainingHours = hoursKey === 'null' ? null : Number(hoursKey)
       const { error } = await supabase
         .from('production_logs')
         .update({
@@ -85,24 +96,31 @@ export async function moveLots(
           expires_at: null,
           frozen_remaining_hours: remainingHours,
         })
-        .eq('id', log.id)
+        .in('id', ids)
         .eq('kitchen_user_id', session.userId)
       if (error) return { error: error.message }
     }
   }
 
   // Unfreeze: restore expires_at from frozen_remaining_hours (or fall back to full shelf life)
+  // Group by computed newExpiresAt to batch updates
   if (unfreezeLotIds.length > 0) {
-    for (const log of logs.filter((l) => unfreezeLotIds.includes(l.id))) {
+    const unfreezeLogs = logs.filter((l) => unfreezeLotIds.includes(l.id))
+    const byExpiry = new Map<string, string[]>()
+    for (const log of unfreezeLogs) {
       const savedHours = log.frozen_remaining_hours != null
         ? Number(log.frozen_remaining_hours)
         : null
-
       const hours = savedHours ?? prod.shelf_life_hours ?? unfreezeExpiryHours ?? null
       const newExpiresAt = hours != null
         ? new Date(now.getTime() + hours * MS_PER_HOUR).toISOString()
         : null
-
+      const key = newExpiresAt ?? 'null'
+      if (!byExpiry.has(key)) byExpiry.set(key, [])
+      byExpiry.get(key)!.push(log.id)
+    }
+    for (const [expiryKey, ids] of byExpiry) {
+      const newExpiresAt = expiryKey === 'null' ? null : expiryKey
       const { error } = await supabase
         .from('production_logs')
         .update({
@@ -110,7 +128,7 @@ export async function moveLots(
           expires_at: newExpiresAt,
           frozen_remaining_hours: null,
         })
-        .eq('id', log.id)
+        .in('id', ids)
         .eq('kitchen_user_id', session.userId)
       if (error) return { error: error.message }
     }
@@ -140,7 +158,7 @@ export async function moveLots(
     if (error) return { error: error.message }
   }
 
-  revalidatePath('/afegir', 'page')
+  revalidatePath('/produccions', 'page')
   revalidatePath('/urgent', 'page')
   revalidatePath('/historial', 'page')
   revalidatePath('/trazabilidad', 'page')

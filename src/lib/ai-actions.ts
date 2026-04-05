@@ -2,6 +2,9 @@
 
 import Anthropic from '@anthropic-ai/sdk'
 import { requireAuth } from '@/lib/require-auth'
+import { createServerClient } from '@/lib/supabase'
+import { suggestShelfLifeSchema } from '@/lib/validation'
+import { z } from 'zod'
 
 interface ShelfLifeSuggestion {
   hours: number | null
@@ -25,60 +28,92 @@ Rules:
 - Be conservative — when in doubt, use the shorter estimate
 - Do not return markdown, code blocks, or any text outside the JSON object`
 
-// --- Daily rate limiter (in-memory, resets on server restart) ---
-let dailyCalls = 0
-let dailyResetDate = new Date().toDateString()
+const aiResponseSchema = z.object({
+  hours: z.union([z.number().int().gt(0), z.null()]),
+  reasoning: z.string(),
+})
 
-function checkRateLimit(): string | null {
-  const today = new Date().toDateString()
-  if (today !== dailyResetDate) {
-    dailyCalls = 0
-    dailyResetDate = today
-  }
+async function checkAiRateLimit(userId: string): Promise<string | null> {
+  const supabase = await createServerClient()
   const maxDaily = parseInt(process.env.AI_DAILY_LIMIT ?? '50', 10)
-  if (dailyCalls >= maxDaily) {
+  const today = new Date().toISOString().slice(0, 10)
+
+  const { data } = await supabase
+    .from('ai_usage')
+    .select('call_count')
+    .eq('kitchen_user_id', userId)
+    .eq('used_at', today)
+    .single()
+
+  if (data && data.call_count >= maxDaily) {
     return `Límit diari de ${maxDaily} suggerències assolit. Torna demà.`
   }
   return null
 }
 
+async function incrementAiUsage(userId: string): Promise<void> {
+  const supabase = await createServerClient()
+  const today = new Date().toISOString().slice(0, 10)
+
+  // Upsert to avoid read-modify-write race condition
+  const { error } = await supabase.rpc('increment_ai_usage', {
+    p_kitchen_user_id: userId,
+    p_date: today,
+  })
+  // Fallback: if RPC doesn't exist yet, use insert with conflict handling
+  if (error) {
+    await supabase
+      .from('ai_usage')
+      .upsert(
+        { kitchen_user_id: userId, used_at: today, call_count: 1 },
+        { onConflict: 'kitchen_user_id,used_at' }
+      )
+  }
+}
+
 export async function suggestShelfLife(name: string): Promise<SuggestResult> {
-  await requireAuth()
+  const parsed = suggestShelfLifeSchema.safeParse({ name: name.trim() })
+  if (!parsed.success) {
+    return { suggestion: null, error: 'Nom massa curt per suggerir caducitat' }
+  }
+
+  const session = await requireAuth()
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) {
     return { suggestion: null, error: 'ANTHROPIC_API_KEY no configurada' }
   }
 
-  const trimmed = name.trim()
-  if (trimmed.length < 2) {
-    return { suggestion: null, error: 'Nom massa curt per suggerir caducitat' }
-  }
-
-  const rateLimitError = checkRateLimit()
+  const rateLimitError = await checkAiRateLimit(session.userId)
   if (rateLimitError) {
     return { suggestion: null, error: rateLimitError }
   }
 
   try {
-    dailyCalls++
+    await incrementAiUsage(session.userId)
+
+    // Sanitize: keep letters, numbers, basic punctuation. Strip newlines to prevent prompt injection.
+    const sanitized = parsed.data.name
+      .replace(/[\r\n]+/g, ' ')
+      .replace(/[^\p{L}\p{N}\s.,'-]/gu, '')
+      .slice(0, 100)
 
     const client = new Anthropic({ apiKey })
     const message = await client.messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 256,
       system: SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: trimmed }],
+      messages: [{ role: 'user', content: sanitized }],
     })
 
     const raw = message.content[0].type === 'text' ? message.content[0].text : ''
     const text = raw.replace(/^```(?:json)?\s*|\s*```$/g, '').trim()
-    const parsed: ShelfLifeSuggestion = JSON.parse(text)
+    const jsonParsed = aiResponseSchema.safeParse(JSON.parse(text))
 
-    if (parsed.hours !== null && (typeof parsed.hours !== 'number' || parsed.hours <= 0)) {
+    if (!jsonParsed.success) {
       return { suggestion: null, error: 'Resposta invàlida del model' }
     }
 
-    return { suggestion: parsed, error: null }
+    return { suggestion: jsonParsed.data, error: null }
   } catch {
     return { suggestion: null, error: 'No s\'ha pogut obtenir la suggerència' }
   }

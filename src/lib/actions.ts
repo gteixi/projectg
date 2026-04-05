@@ -4,18 +4,21 @@ import { revalidatePath } from 'next/cache'
 import { createServerClient } from '@/lib/supabase'
 import { requireAuth } from '@/lib/require-auth'
 import { MS_PER_HOUR } from '@/lib/constants'
+import { extendLotSchema, logProductionSchema } from '@/lib/validation'
 
 export async function extendLotToEndOfDay(
   logId: string,
 ): Promise<{ error: string | null }> {
+  const parsed = extendLotSchema.safeParse({ logId })
+  if (!parsed.success) return { error: 'Dades invàlides' }
+
   const session = await requireAuth()
   const supabase = await createServerClient()
 
-  // Verify the lot is not frozen
   const { data: log } = await supabase
     .from('production_logs')
     .select('current_station, productions!inner(station)')
-    .eq('id', logId)
+    .eq('id', parsed.data.logId)
     .eq('kitchen_user_id', session.userId)
     .single()
 
@@ -28,12 +31,12 @@ export async function extendLotToEndOfDay(
   }
 
   const now = new Date()
-  const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59)
+  const endOfDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999))
 
   const { error } = await supabase
     .from('production_logs')
     .update({ expires_at: endOfDay.toISOString() })
-    .eq('id', logId)
+    .eq('id', parsed.data.logId)
     .eq('kitchen_user_id', session.userId)
 
   if (error) return { error: error.message }
@@ -61,52 +64,55 @@ export async function logProduction(
   batchNumber: string,
   station?: string | null,
 ): Promise<ProductionResult> {
-  const session = await requireAuth()
-  if (quantity <= 0) return { error: 'La quantitat ha de ser major que 0', batch_number: null }
+  const parsed = logProductionSchema.safeParse({
+    productionId, quantity, shelfLifeHours, batchNumber, station: station ?? null,
+  })
+  if (!parsed.success) return { error: 'Dades invàlides', batch_number: null }
 
+  const session = await requireAuth()
   const supabase = await createServerClient()
 
   const { count } = await supabase
     .from('production_logs')
     .select('*', { count: 'exact', head: true })
-    .eq('batch_number', batchNumber)
+    .eq('batch_number', parsed.data.batchNumber)
     .eq('kitchen_user_id', session.userId)
   if (count && count > 0) return { error: 'Ja existeix una producció amb aquest lot', batch_number: null }
 
   const { data: prod } = await supabase
     .from('productions')
     .select('station')
-    .eq('id', productionId)
+    .eq('id', parsed.data.productionId)
     .eq('kitchen_user_id', session.userId)
     .single()
   if (!prod) return { error: 'Producció no trobada', batch_number: null }
-  const effectiveStation = station ?? prod.station
+  const effectiveStation = parsed.data.station ?? prod.station
   const isFrozen = effectiveStation === 'Congelador'
 
   const now = new Date()
   const expiresAt = isFrozen ? null
-    : shelfLifeHours
-      ? new Date(now.getTime() + shelfLifeHours * MS_PER_HOUR).toISOString()
+    : parsed.data.shelfLifeHours
+      ? new Date(now.getTime() + parsed.data.shelfLifeHours * MS_PER_HOUR).toISOString()
       : null
 
-  const currentStation = station && station !== prod.station ? station : null
+  const currentStation = parsed.data.station && parsed.data.station !== prod.station ? parsed.data.station : null
 
   const { error } = await supabase.from('production_logs').insert({
-    production_id: productionId,
-    quantity,
+    production_id: parsed.data.productionId,
+    quantity: parsed.data.quantity,
     logged_at: now.toISOString(),
     expires_at: expiresAt,
-    batch_number: batchNumber,
+    batch_number: parsed.data.batchNumber,
     kitchen_user_id: session.userId,
     ...(currentStation ? { current_station: currentStation } : {}),
   })
 
   if (error) return { error: error.message, batch_number: null }
 
-  revalidatePath('/afegir', 'page')
+  revalidatePath('/produccions', 'page')
   revalidatePath('/urgent', 'page')
   revalidatePath('/historial', 'page')
   revalidatePath('/trazabilidad', 'page')
-  return { error: null, batch_number: batchNumber }
+  return { error: null, batch_number: parsed.data.batchNumber }
 }
 

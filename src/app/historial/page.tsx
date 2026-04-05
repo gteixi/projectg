@@ -19,7 +19,8 @@ export default async function HistorialPage({
   const supabase = await createServerClient()
 
   const { dia } = await searchParams
-  const today = new Date().toISOString().slice(0, 10)
+  const now = new Date()
+  const today = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-${String(now.getUTCDate()).padStart(2, '0')}`
   const selectedDate = dia && /^\d{4}-\d{2}-\d{2}$/.test(dia) ? dia : today
 
   const singleDay = !!dia
@@ -66,8 +67,8 @@ export default async function HistorialPage({
   const byDate = new Map<string, Map<string, DayLog[]>>()
 
   for (const log of logsResult.data ?? []) {
-    const prod = Array.isArray(log.productions) ? log.productions[0] : log.productions
-    const prodTyped = prod as ProductionJoin
+    const rawProd = Array.isArray(log.productions) ? log.productions[0] ?? null : log.productions
+    const prodTyped = (rawProd as ProductionJoin | null) ?? { name: '—', unit: '' }
     const dateStr = (log.logged_at as string).slice(0, 10)
     if (!byDate.has(dateStr)) byDate.set(dateStr, new Map())
     const byPrep = byDate.get(dateStr)!

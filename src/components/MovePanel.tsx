@@ -44,11 +44,12 @@ interface Props {
 }
 
 const EXPIRY_PRESETS = [
-  { label: '12h', hours: 12 },
   { label: '24h', hours: 24 },
   { label: '48h', hours: 48 },
   { label: '72h', hours: 72 },
 ]
+
+type ShelfUnit = 'hours' | 'days'
 
 export function MovePanel({ productionId, unit, station, shelfLifeHours, initialLots, expiredLots, onSuccess }: Props): React.JSX.Element {
   const router = useRouter()
@@ -58,7 +59,8 @@ export function MovePanel({ productionId, unit, station, shelfLifeHours, initial
   const [targetStation, setTargetStation] = useState<Station | null>(null)
   const [pending, startTransition] = useTransition()
   const [showExpiryPrompt, setShowExpiryPrompt] = useState(false)
-  const [customHours, setCustomHours] = useState('')
+  const [expiryValue, setExpiryValue] = useState('')
+  const [expiryUnit, setExpiryUnit] = useState<ShelfUnit>('hours')
 
   const selectedLots = lots.filter((l) => selected.has(l.log_id))
   const effectiveStations = new Set(selectedLots.length > 0
@@ -235,7 +237,7 @@ export function MovePanel({ productionId, unit, station, shelfLifeHours, initial
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
               </button>
             </div>
-            <p className="text-sm text-gray-500">Aquesta producció no té vida útil definida. Quantes hores de caducitat vols assignar?</p>
+            <p className="text-sm text-gray-500">Aquesta producció no té vida útil definida. Quanta caducitat vols assignar?</p>
             <div className="flex gap-2">
               {EXPIRY_PRESETS.map((p) => (
                 <button
@@ -248,27 +250,70 @@ export function MovePanel({ productionId, unit, station, shelfLifeHours, initial
                 </button>
               ))}
             </div>
-            <div className="flex gap-2">
-              <input
-                type="number"
-                inputMode="numeric"
-                min="1"
-                placeholder="Hores"
-                value={customHours}
-                onChange={(e) => setCustomHours(e.target.value)}
-                className="flex-1 h-12 rounded-xl border border-gray-300 px-4 text-base text-gray-900 placeholder:text-gray-400"
-              />
+            <div className="flex items-center gap-3">
+              <div className="flex-1 h-px bg-[#e5e3de]" />
+              <span className="text-xs text-gray-400 uppercase tracking-wider">o personalitzar</span>
+              <div className="flex-1 h-px bg-[#e5e3de]" />
+            </div>
+            <div className="flex h-12 rounded-xl border border-[#e5e3de] bg-white overflow-hidden">
               <button
+                type="button"
                 onClick={() => {
-                  const h = Number(customHours)
-                  if (h > 0) doMove(h)
+                  if (expiryUnit === 'days') {
+                    const raw = parseFloat(expiryValue)
+                    if (!isNaN(raw) && raw > 0) {
+                      const converted = raw * 24
+                      setExpiryValue(Number.isInteger(converted) ? String(converted) : converted.toFixed(1))
+                    }
+                    setExpiryUnit('hours')
+                  }
                 }}
-                disabled={pending || !customHours || Number(customHours) <= 0}
-                className="h-12 px-5 rounded-xl bg-blue-600 text-white text-base font-semibold hover:bg-blue-700 disabled:opacity-40 transition-colors"
+                disabled={pending}
+                className={`flex-1 text-base font-semibold transition-colors ${expiryUnit === 'hours' ? 'bg-gray-900 text-white' : 'text-gray-500 hover:bg-gray-100'}`}
               >
-                OK
+                Hores
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (expiryUnit === 'hours') {
+                    const raw = parseFloat(expiryValue)
+                    if (!isNaN(raw) && raw > 0) {
+                      const converted = raw / 24
+                      setExpiryValue(Number.isInteger(converted) ? String(converted) : converted.toFixed(1))
+                    }
+                    setExpiryUnit('days')
+                  }
+                }}
+                disabled={pending}
+                className={`flex-1 text-base font-semibold transition-colors ${expiryUnit === 'days' ? 'bg-gray-900 text-white' : 'text-gray-500 hover:bg-gray-100'}`}
+              >
+                Dies
               </button>
             </div>
+            <input
+              type="number"
+              inputMode="numeric"
+              min="1"
+              step="1"
+              value={expiryValue}
+              onChange={(e) => setExpiryValue(e.target.value)}
+              placeholder={expiryUnit === 'days' ? 'Ex: 3' : 'Ex: 24'}
+              className="w-full h-14 rounded-xl border border-[#e5e3de] px-4 text-lg bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400"
+            />
+            <button
+              onClick={() => {
+                const raw = parseFloat(expiryValue)
+                if (!isNaN(raw) && raw > 0) {
+                  const hours = expiryUnit === 'days' ? raw * 24 : raw
+                  doMove(hours)
+                }
+              }}
+              disabled={pending || !expiryValue || parseFloat(expiryValue) <= 0}
+              className="w-full h-14 rounded-xl bg-blue-600 text-white text-base font-semibold hover:bg-blue-700 disabled:opacity-40 transition-colors"
+            >
+              Confirmar
+            </button>
           </div>
         </div>
       )}
