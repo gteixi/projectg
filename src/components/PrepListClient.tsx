@@ -155,7 +155,7 @@ export function PrepListClient({ items, lotsByProduction, expiredLotsByProductio
 
   return (
     <>
-      <h1 className="text-2xl font-bold tracking-tight text-gray-900 mb-4 md:text-3xl">Afegir</h1>
+      <h1 className="text-2xl font-bold tracking-tight text-gray-900 mb-4 md:text-3xl">Produccions</h1>
       <div className="flex items-center gap-3 mb-6">
         <SearchInput
           value={query}
@@ -178,9 +178,9 @@ export function PrepListClient({ items, lotsByProduction, expiredLotsByProductio
             onStockDelta={handleStockDelta}
           />
         ))}
-        {filtered.length === 0 && (
+        {query && filtered.length === 0 && (
           <p className="text-center text-gray-400 text-lg py-16">
-            {query ? `Sense resultats per "${query}"` : 'Sense dades per avui'}
+            Sense resultats per &quot;{query}&quot;
           </p>
         )}
       </div>
