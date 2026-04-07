@@ -36,7 +36,7 @@ export function PrepRow({ item, initialLots, expiredLots, openMode, onSetMode, o
         <td className="py-5 pr-6 align-middle">
           <div className="flex items-center gap-2">
             <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-lg font-semibold text-gray-900 leading-tight">{item.name}</span>
+              <span className="text-lg font-semibold text-gray-900 leading-tight truncate max-w-[260px] inline-block align-middle" title={item.name}>{item.name}</span>
               <ShelfLifeInfo hours={item.shelf_life_hours} open={showInfo} onToggle={setShowInfo} onEdit={() => setEditing(true)} />
             </div>
           </div>

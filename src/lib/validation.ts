@@ -25,7 +25,7 @@ export const logProductionSchema = z.object({
 })
 
 export const createPrepSchema = z.object({
-  name: z.string().trim().min(2),
+  name: z.string().trim().min(2).max(50),
   unit: unitEnum,
   shelf_life_hours: shelfLifeHours,
   station: stationEnum,
@@ -66,7 +66,7 @@ export const deletePhotoSchema = z.object({
 })
 
 export const suggestShelfLifeSchema = z.object({
-  name: z.string().min(2),
+  name: z.string().min(2).max(50),
 })
 
 export const deactivateSchema = z.object({

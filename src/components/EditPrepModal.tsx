@@ -182,6 +182,7 @@ export function EditPrepModal({ item, onClose }: Props): React.JSX.Element {
               type="text"
               value={name}
               onChange={(e) => { setName(e.target.value); clearError('name') }}
+              maxLength={50}
               onKeyDown={(e) => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') handleClose() }}
               disabled={pending}
               className={inputCls('name')}

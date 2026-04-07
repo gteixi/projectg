@@ -29,7 +29,7 @@ export function PrepCard({ item, initialLots, expiredLots, openMode, onSetMode, 
     <div className="px-4 py-5 border-b border-[#e5e3de] last:border-0">
       {editing && <EditPrepModal item={item} onClose={() => { setEditing(false); setShowInfo(false) }} />}
       <div className="mb-4 flex flex-wrap items-center gap-1.5">
-        <span className="text-lg font-semibold text-gray-900 leading-tight">{item.name}</span>
+        <span className="text-lg font-semibold text-gray-900 leading-tight truncate max-w-[260px] inline-block align-middle" title={item.name}>{item.name}</span>
         <ShelfLifeInfo hours={item.shelf_life_hours} open={showInfo} onToggle={setShowInfo} onEdit={() => setEditing(true)} align="right" />
       </div>
       {showInfo && (

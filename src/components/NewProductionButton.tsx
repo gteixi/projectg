@@ -184,6 +184,7 @@ export function NewProductionButton() {
               type="text"
               value={form.name}
               onChange={(e) => set('name', e.target.value)}
+              maxLength={50}
               onKeyDown={(e) => { if (e.key === 'Enter') handleSubmit(); if (e.key === 'Escape') handleClose() }}
               disabled={pending}
               placeholder="Ex: Vinagreta de mostassa"
