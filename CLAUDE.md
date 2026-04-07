@@ -72,6 +72,18 @@ La base de datos de producción es del cliente y está en uso real. Todo el desa
 - Estilos con Tailwind — sin CSS modules ni styled-components
 - Sin librerías de UI externas (no shadcn, no MUI) — componentes propios
 
+## Zona horaria — REGLA CRÍTICA
+Los usuarios están en España (Europe/Madrid). El servidor en Vercel corre en UTC. Toda operación con fechas/horas DEBE usar la timezone explícitamente:
+- Constante: `TIMEZONE = 'Europe/Madrid'` en `src/lib/constants.ts`
+- Formatear fechas: siempre pasar `{ timeZone: TIMEZONE }` a `toLocaleString`, `toLocaleDateString`, `toLocaleTimeString`
+- Extraer YYYY-MM-DD de un ISO timestamp: usar `toLocalDateStr(iso)` de `src/lib/format.ts`, NUNCA `.slice(0, 10)` ni `.toISOString().slice(0, 10)`
+- Rangos de fecha para queries: usar `toMadridIso(dateStr, time)` para convertir hora local Madrid a UTC ISO
+- Comparar si dos timestamps son del mismo día: comparar `toLocalDateStr()` de ambos, NUNCA `.toDateString()`
+- Fin del día actual: usar `endOfDayInMadrid()` de `src/lib/format.ts`
+- NUNCA usar `getUTCFullYear/getUTCMonth/getUTCDate` para construir fechas visibles al usuario
+- NUNCA usar `setUTCHours()` para boundaries de día
+- NUNCA usar `new Date(dateStr + 'T00:00:00')` sin convertir a Madrid — en el servidor es UTC
+
 ## Lo que NO hacer
 - No usar Inter, Roboto ni Arial
 - No usar sombras box-shadow decorativas

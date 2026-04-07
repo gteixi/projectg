@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { createPortal } from 'react-dom'
 import { formatDateTime, truncUnit, expirySemaphore } from '@/lib/format'
-import { LOCALE, SALE_REASONS, EXIT_REASONS, EXIT_REASON_LABELS } from '@/lib/constants'
+import { LOCALE, TIMEZONE, SALE_REASONS, EXIT_REASONS, EXIT_REASON_LABELS } from '@/lib/constants'
 import { type Station, type SaleReason, type ExitReason } from '@/types/database'
 import { createSaleExit } from '@/lib/sale-actions'
 import { extendLotToEndOfDay } from '@/lib/actions'
@@ -62,7 +62,7 @@ function FrozenDot(): React.JSX.Element {
 function ExpiryDot({ iso }: { iso: string }): React.JSX.Element {
   const s = expirySemaphore(iso)
   const date = new Date(iso)
-  const day = date.toLocaleString(LOCALE, { day: '2-digit', month: '2-digit' })
+  const day = date.toLocaleString(LOCALE, { timeZone: TIMEZONE, day: '2-digit', month: '2-digit' })
   return (
     <span className="inline-flex items-center gap-1.5 w-[3.75rem]">
       <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${DOT_CLS[s]}`} />
@@ -76,7 +76,7 @@ function ExpiryBadge({ iso }: { iso: string }): React.JSX.Element {
   const date = new Date(iso)
   const label = s === 'red'
     ? `Caducat ${formatDateTime(iso)}`
-    : `Cad. ${date.toLocaleString(LOCALE, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}`
+    : `Cad. ${date.toLocaleString(LOCALE, { timeZone: TIMEZONE, day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}`
   return (
     <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-sm font-semibold ${BADGE_CLS[s]}`}>
       {label}

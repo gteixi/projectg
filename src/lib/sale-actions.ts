@@ -6,6 +6,8 @@ import { requireAuth } from '@/lib/require-auth'
 import { type SaleReason, type ExitReason, type ActiveLot, type FifoBreakdown, type ActionResult } from '@/types/database'
 import { fetchExitedByBatch } from '@/lib/stock-helpers'
 import { saleExitSchema, getRecipeSchema } from '@/lib/validation'
+import { toMadridIso } from '@/lib/format'
+import { LOCALE, TIMEZONE } from '@/lib/constants'
 
 export async function getActiveLots(
   productionId: string
@@ -16,8 +18,8 @@ export async function getActiveLots(
   const session = await requireAuth()
   const supabase = await createServerClient()
 
-  const todayStart = new Date()
-  todayStart.setUTCHours(0, 0, 0, 0)
+  const madridToday = new Intl.DateTimeFormat('en-CA', { timeZone: TIMEZONE, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
+  const todayStartIso = toMadridIso(madridToday, '00:00:00.000')
 
   const logsResult = await supabase
     .from('production_logs')
@@ -25,7 +27,7 @@ export async function getActiveLots(
     .eq('production_id', productionId)
     .eq('kitchen_user_id', session.userId)
     .gt('quantity', 0)
-    .gte('logged_at', todayStart.toISOString())
+    .gte('logged_at', todayStartIso)
     .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
     .not('batch_number', 'is', null)
     .order('expires_at', { ascending: true, nullsFirst: false })

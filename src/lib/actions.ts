@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createServerClient } from '@/lib/supabase'
 import { requireAuth } from '@/lib/require-auth'
 import { MS_PER_HOUR } from '@/lib/constants'
+import { endOfDayInMadrid } from '@/lib/format'
 import { extendLotSchema, logProductionSchema } from '@/lib/validation'
 
 export async function extendLotToEndOfDay(
@@ -30,8 +31,7 @@ export async function extendLotToEndOfDay(
     return { error: 'No es pot ampliar un lot congelat' }
   }
 
-  const now = new Date()
-  const endOfDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999))
+  const endOfDay = endOfDayInMadrid()
 
   const { error } = await supabase
     .from('production_logs')

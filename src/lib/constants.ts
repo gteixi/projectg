@@ -42,3 +42,4 @@ export const UNIT_TRUNCATE_LENGTH = 4
 export const UNIT_TRUNCATE_SLICE = 3
 export const MIN_PREP_NAME_LENGTH = 2
 export const LOCALE = 'ca-ES' as const
+export const TIMEZONE = 'Europe/Madrid' as const

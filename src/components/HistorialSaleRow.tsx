@@ -26,7 +26,7 @@ export function HistorialSaleRow({ name, unit, quantity, reason, exitReason, lot
   return (
     <>
       <li
-        className={`grid grid-cols-[auto_1fr_auto_auto] md:grid-cols-[12px_1fr_56px_112px] items-center gap-x-1.5 md:gap-x-3 px-4 py-3 md:px-6 cursor-pointer select-none transition-colors ${open ? 'bg-red-50' : 'hover:bg-red-50'}`}
+        className={`grid grid-cols-[auto_1fr_56px_112px] md:grid-cols-[12px_1fr_56px_112px] items-center gap-x-3 px-4 py-3 md:px-6 cursor-pointer select-none transition-colors ${open ? 'bg-red-50' : 'hover:bg-red-50'}`}
         onClick={() => setOpen((v) => !v)}
       >
         <span className="w-3 h-3 rounded-full bg-red-400" />
@@ -38,7 +38,7 @@ export function HistorialSaleRow({ name, unit, quantity, reason, exitReason, lot
             </span>
           )}
         </span>
-        <span className="text-sm font-semibold tabular-nums text-right w-20 md:w-28 text-red-600">
+        <span className="text-sm font-semibold tabular-nums text-right text-red-600 whitespace-nowrap">
           -{quantity} {unit}
         </span>
       </li>
@@ -47,18 +47,16 @@ export function HistorialSaleRow({ name, unit, quantity, reason, exitReason, lot
         <li className="bg-red-50 border-t border-red-100">
           <ul className="divide-y divide-red-100">
             {lots.map((l, i) => (
-              <li key={i} className="px-4 py-2.5 md:px-8 flex items-center gap-2 md:gap-3">
-                <span className="flex items-center gap-1 md:gap-2 min-w-0 flex-1 overflow-hidden">
-                  <span className="flex items-center gap-1 shrink-0">
-                    <span className="text-xs text-gray-500">Lote</span>
-                    <span className="text-xs font-mono font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-2 py-0.5">#{l.batch_number}</span>
-                  </span>
+              <li key={i} className="grid grid-cols-[1fr_auto_auto] items-center gap-x-3 px-4 py-2.5 md:px-8 overflow-hidden">
+                <span className="flex items-center gap-1 min-w-0 overflow-hidden">
+                  <span className="text-xs text-gray-500 shrink-0">Lote</span>
+                  <span className="text-xs font-mono font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-2 py-0.5 shrink-0">#{l.batch_number}</span>
                   <span className="text-xs font-semibold text-red-700 bg-red-100 rounded-full px-2 py-0.5 truncate">
                     {REASON_LABELS[reason] ?? reason}{exitReason && exitReason in EXIT_REASON_LABELS ? ` → ${EXIT_REASON_LABELS[exitReason as ExitReason]}` : ''}
                   </span>
                 </span>
-                <span className="text-sm tabular-nums text-gray-500 shrink-0">{l.time}</span>
-                <span className="text-sm font-semibold tabular-nums text-red-700 shrink-0 w-20 text-right">
+                <span className="text-sm tabular-nums text-gray-500 whitespace-nowrap">{l.time}</span>
+                <span className="text-sm font-semibold tabular-nums text-red-700 whitespace-nowrap text-right w-20">
                   -{l.quantity} {unit}
                 </span>
               </li>

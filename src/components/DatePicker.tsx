@@ -8,7 +8,8 @@ export function DatePicker({ value, basePath = '/informe' }: { value: string; ba
   const searchParams = useSearchParams()
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const today = new Date().toISOString().slice(0, 10)
+  const now = new Date()
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const params = new URLSearchParams(searchParams.toString())

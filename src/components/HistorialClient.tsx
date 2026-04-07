@@ -113,10 +113,10 @@ export function HistorialClient({ days }: { days: DaySummary[] }): React.JSX.Ele
                 <p className="px-4 py-4 text-sm text-gray-400 md:px-6">Sense activitat registrada</p>
               ) : (
                 <ul className="divide-y divide-[#e5e3de]">
-                  {day.items.map((item) =>
+                  {day.items.map((item, idx) =>
                     item.kind === 'prep' ? (
                       <HistorialPrepRow
-                        key={item.data.production_id}
+                        key={`prep-${item.data.production_id}`}
                         name={item.data.name}
                         total_produced={item.data.total_produced}
                         unit={item.data.unit}
@@ -126,7 +126,7 @@ export function HistorialClient({ days }: { days: DaySummary[] }): React.JSX.Ele
                       />
                     ) : item.kind === 'sale' ? (
                       <HistorialSaleRow
-                        key={item.data.exit_id}
+                        key={`sale-${item.data.exit_id}`}
                         name={item.data.name}
                         unit={item.data.unit}
                         quantity={item.data.quantity}
@@ -137,7 +137,7 @@ export function HistorialClient({ days }: { days: DaySummary[] }): React.JSX.Ele
                       />
                     ) : (
                       <HistorialMoveRow
-                        key={item.data.move_group_id}
+                        key={`move-${item.data.move_group_id}`}
                         name={item.data.name}
                         unit={item.data.unit}
                         lot_count={item.data.lot_count}

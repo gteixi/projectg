@@ -4,6 +4,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { requireAuth } from '@/lib/require-auth'
 import { createServerClient } from '@/lib/supabase'
 import { suggestShelfLifeSchema } from '@/lib/validation'
+import { toLocalDateStr } from '@/lib/format'
 import { z } from 'zod'
 
 interface ShelfLifeSuggestion {
@@ -36,7 +37,7 @@ const aiResponseSchema = z.object({
 async function checkAiRateLimit(userId: string): Promise<string | null> {
   const supabase = await createServerClient()
   const maxDaily = parseInt(process.env.AI_DAILY_LIMIT ?? '50', 10)
-  const today = new Date().toISOString().slice(0, 10)
+  const today = toLocalDateStr(new Date().toISOString())
 
   const { data } = await supabase
     .from('ai_usage')
@@ -53,7 +54,7 @@ async function checkAiRateLimit(userId: string): Promise<string | null> {
 
 async function incrementAiUsage(userId: string): Promise<void> {
   const supabase = await createServerClient()
-  const today = new Date().toISOString().slice(0, 10)
+  const today = toLocalDateStr(new Date().toISOString())
 
   // Upsert to avoid read-modify-write race condition
   const { error } = await supabase.rpc('increment_ai_usage', {

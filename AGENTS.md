@@ -44,6 +44,14 @@ Always read the relevant doc in `node_modules/next/dist/docs/` first. The API su
 - Prefer `unknown` over `any` when the type is genuinely unknown.
 - Type Supabase responses explicitly; don't rely on `data as SomeType` casts without validation.
 
+### Timezone (CRITICAL)
+- Users are in `Europe/Madrid`. Server runs in UTC (Vercel).
+- Always use `TIMEZONE` from `src/lib/constants.ts` and the helpers in `src/lib/format.ts`.
+- Use `toLocalDateStr(iso)` to extract `YYYY-MM-DD` in Madrid time. Never `.slice(0, 10)`.
+- Use `toMadridIso(dateStr, time)` for query date boundaries. Never `new Date(str + 'T00:00:00').toISOString()`.
+- All `toLocaleString`/`toLocaleDateString`/`toLocaleTimeString` calls MUST include `{ timeZone: TIMEZONE }`.
+- Never use `getUTCFullYear/Month/Date`, `setUTCHours`, or `.toDateString()` for date logic.
+
 ### Code style
 - No comments unless the logic is non-obvious.
 - No JSDoc on components or utilities unless explicitly requested.

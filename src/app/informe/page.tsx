@@ -3,9 +3,9 @@ import { createServerClient } from '@/lib/supabase'
 import { SidebarServer } from '@/components/SidebarServer'
 import { DatePicker } from '@/components/DatePicker'
 import { LogoutButton } from '@/components/LogoutButton'
-import { formatDateLabel } from '@/lib/format'
+import { formatDateLabel, toLocalDateStr } from '@/lib/format'
 import { type Station, type ExitReason } from '@/types/database'
-import { EXIT_REASON_LABELS } from '@/lib/constants'
+import { EXIT_REASON_LABELS, LOCALE, TIMEZONE } from '@/lib/constants'
 import { DemandaTable } from '@/components/DemandaTable'
 
 const STATION_COLORS: Record<Station, string> = {
@@ -43,7 +43,8 @@ export default async function InformePage({
   const supabase = await createServerClient()
 
   const { dia } = await searchParams
-  const today = new Date().toISOString().slice(0, 10)
+  const todayParts = new Date().toLocaleDateString(LOCALE, { timeZone: TIMEZONE, year: 'numeric', month: '2-digit', day: '2-digit' }).split('/')
+  const today = `${todayParts[2]}-${todayParts[1]}-${todayParts[0]}`
   const selectedDate = dia && /^\d{4}-\d{2}-\d{2}$/.test(dia) ? dia : today
   const singleDay = !!dia
 
@@ -52,12 +53,12 @@ export default async function InformePage({
   const dateFrom = singleDay ? selectedDate : (() => {
     const d = new Date(selectedDate + 'T12:00:00')
     d.setDate(d.getDate() - 6)
-    return d.toISOString().slice(0, 10)
+    return toLocalDateStr(d.toISOString())
   })()
 
   const dateToNext = new Date(selectedDate + 'T12:00:00')
   dateToNext.setDate(dateToNext.getDate() + 1)
-  const dateToExclusive = dateToNext.toISOString().slice(0, 10)
+  const dateToExclusive = toLocalDateStr(dateToNext.toISOString())
 
   const [summaryResult, idleResult, mermaReasonsResult] = await Promise.all([
     supabase.rpc('get_consumption_summary', { date_from: dateFrom, date_to: dateTo, p_user_id: session.userId }),

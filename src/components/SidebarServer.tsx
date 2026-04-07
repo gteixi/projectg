@@ -1,7 +1,8 @@
 import { createServerClient } from '@/lib/supabase'
 import { getSession } from '@/lib/auth'
 import { Sidebar } from '@/components/Sidebar'
-import { URGENT_LOOKAHEAD_DAYS } from '@/lib/constants'
+import { URGENT_LOOKAHEAD_DAYS, LOCALE, TIMEZONE } from '@/lib/constants'
+import { toMadridIso } from '@/lib/format'
 import { fetchExitedByBatch } from '@/lib/stock-helpers'
 
 export async function SidebarServer(): Promise<React.JSX.Element> {
@@ -11,7 +12,11 @@ export async function SidebarServer(): Promise<React.JSX.Element> {
   const supabase = await createServerClient()
 
   const now = new Date()
-  const startOfDayAfterTomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + URGENT_LOOKAHEAD_DAYS).toISOString()
+  const madridToday = new Intl.DateTimeFormat('en-CA', { timeZone: TIMEZONE, year: 'numeric', month: '2-digit', day: '2-digit' }).format(now)
+  const d = new Date(madridToday + 'T12:00:00')
+  d.setDate(d.getDate() + URGENT_LOOKAHEAD_DAYS)
+  const futureDate = new Intl.DateTimeFormat('en-CA', { timeZone: TIMEZONE, year: 'numeric', month: '2-digit', day: '2-digit' }).format(d)
+  const startOfDayAfterTomorrow = toMadridIso(futureDate, '00:00:00.000')
 
   const logsResult = await supabase
     .from('production_logs')

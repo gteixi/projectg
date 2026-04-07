@@ -5,8 +5,8 @@ import { DatePicker } from '@/components/DatePicker'
 import { HistorialClient, type DaySummary } from '@/components/HistorialClient'
 import { type LogDetail } from '@/components/HistorialPrepRow'
 import { type SaleReason, type ProductionJoin, type ExitLotJoin } from '@/types/database'
-import { formatDateLabel, formatTime } from '@/lib/format'
-import { HISTORIAL_DAYS, HISTORIAL_LOGS_LIMIT, HISTORIAL_EXITS_LIMIT, HISTORIAL_MOVES_LIMIT } from '@/lib/constants'
+import { formatDateLabel, formatTime, toLocalDateStr, toMadridIso } from '@/lib/format'
+import { HISTORIAL_DAYS, HISTORIAL_LOGS_LIMIT, HISTORIAL_EXITS_LIMIT, HISTORIAL_MOVES_LIMIT, LOCALE, TIMEZONE } from '@/lib/constants'
 
 type DayItem = DaySummary['items'][number]
 
@@ -20,17 +20,20 @@ export default async function HistorialPage({
 
   const { dia } = await searchParams
   const now = new Date()
-  const today = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-${String(now.getUTCDate()).padStart(2, '0')}`
+  const todayParts = now.toLocaleDateString(LOCALE, { timeZone: TIMEZONE, year: 'numeric', month: '2-digit', day: '2-digit' }).split('/')
+  const today = `${todayParts[2]}-${todayParts[1]}-${todayParts[0]}`
   const selectedDate = dia && /^\d{4}-\d{2}-\d{2}$/.test(dia) ? dia : today
 
   const singleDay = !!dia
   const numDays = singleDay ? 1 : HISTORIAL_DAYS
 
-  const endDate = new Date(selectedDate + 'T23:59:59.999')
-  const startDate = new Date(selectedDate + 'T00:00:00.000')
-  if (!singleDay) startDate.setDate(startDate.getDate() - (HISTORIAL_DAYS - 1))
-  const sinceIso = startDate.toISOString()
-  const untilIso = endDate.toISOString()
+  const untilIso = toMadridIso(selectedDate, '23:59:59.999')
+  const startDateStr = singleDay ? selectedDate : (() => {
+    const d = new Date(selectedDate + 'T12:00:00')
+    d.setDate(d.getDate() - (HISTORIAL_DAYS - 1))
+    return toLocalDateStr(d.toISOString())
+  })()
+  const sinceIso = toMadridIso(startDateStr, '00:00:00.000')
 
   const [logsResult, exitsResult, movesResult] = await Promise.all([
     supabase
@@ -69,7 +72,7 @@ export default async function HistorialPage({
   for (const log of logsResult.data ?? []) {
     const rawProd = Array.isArray(log.productions) ? log.productions[0] ?? null : log.productions
     const prodTyped = (rawProd as ProductionJoin | null) ?? { name: '—', unit: '' }
-    const dateStr = (log.logged_at as string).slice(0, 10)
+    const dateStr = toLocalDateStr(log.logged_at as string)
     if (!byDate.has(dateStr)) byDate.set(dateStr, new Map())
     const byPrep = byDate.get(dateStr)!
     const pid = log.production_id as string
@@ -85,7 +88,7 @@ export default async function HistorialPage({
 
   const exitsByDate = new Map<string, { sortTime: string; exit_id: string; name: string; unit: string; quantity: number; reason: SaleReason; exitReason: string | null; lots: { batch_number: string; quantity: number; time: string }[] }[]>()
   for (const exit of exitsResult.data ?? []) {
-    const dateStr = (exit.logged_at as string).slice(0, 10)
+    const dateStr = toLocalDateStr(exit.logged_at as string)
     if (!exitsByDate.has(dateStr)) exitsByDate.set(dateStr, [])
     const rawProd = exit.productions as ProductionJoin | ProductionJoin[] | null
     const prod = Array.isArray(rawProd) ? rawProd[0] ?? null : rawProd
@@ -107,7 +110,7 @@ export default async function HistorialPage({
   for (const move of movesResult.data ?? []) {
     const rawProd = move.productions as ProductionJoin | ProductionJoin[] | null
     const prod = Array.isArray(rawProd) ? rawProd[0] ?? null : rawProd
-    const dateStr = (move.moved_at as string).slice(0, 10)
+    const dateStr = toLocalDateStr(move.moved_at as string)
     if (!movesByDate.has(dateStr)) movesByDate.set(dateStr, [])
     movesByDate.get(dateStr)!.push({
       id: move.id as string,
@@ -126,7 +129,7 @@ export default async function HistorialPage({
   for (let i = 0; i < numDays; i++) {
     const d = new Date(selectedDate + 'T12:00:00')
     d.setDate(d.getDate() - i)
-    const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    const dateStr = toLocalDateStr(d.toISOString())
     const byPrep = byDate.get(dateStr)
 
     const prepItems: DayItem[] = []
@@ -158,12 +161,13 @@ export default async function HistorialPage({
     const dayMoves = movesByDate.get(dateStr) ?? []
     const moveGroups = new Map<string, MoveEntry[]>()
     for (const m of dayMoves) {
-      const key = `${m.production_id}:${m.to_station}:${m.moved_at}`
+      const key = m.production_id
       if (!moveGroups.has(key)) moveGroups.set(key, [])
       moveGroups.get(key)!.push(m)
     }
     for (const [key, entries] of moveGroups) {
       const first = entries[0]
+      const destinations = [...new Set(entries.map((e) => e.to_station))]
       moveItems.push({
         kind: 'move' as const,
         sortTime: first.moved_at,
@@ -172,7 +176,7 @@ export default async function HistorialPage({
           name: first.name,
           unit: first.unit,
           lot_count: entries.length,
-          to_station: first.to_station,
+          to_station: destinations.length === 1 ? destinations[0] : `${destinations.length} seccions`,
           entries: entries.map((e) => ({
             batch_number: e.batch_number,
             quantity: e.quantity,

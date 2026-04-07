@@ -137,6 +137,7 @@ export function ProductionButton({ productionId, name, unit, shelfLifeHours, sta
           ref={inputRef}
           type="number"
           min="0.1"
+          max="10000"
           step="0.1"
           placeholder="Quantitat"
           autoFocus
@@ -144,6 +145,11 @@ export function ProductionButton({ productionId, name, unit, shelfLifeHours, sta
           onKeyDown={(e) => {
             if (e.key === 'Enter') handleConfirm()
             if (e.key === 'Escape') close()
+          }}
+          onInput={(e) => {
+            const input = e.currentTarget
+            const v = parseFloat(input.value)
+            if (v > 10000) input.value = '10000'
           }}
           className="w-24 md:w-32 h-14 text-left text-base md:text-lg border border-[#e5e3de] rounded-xl px-3 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50 bg-white shrink-0 overflow-hidden text-ellipsis placeholder:text-gray-400"
         />
