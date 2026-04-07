@@ -18,7 +18,7 @@ export const pinSchema = z.object({
 
 export const logProductionSchema = z.object({
   productionId: uuidLike,
-  quantity: z.number().gt(0).lte(10000),
+  quantity: z.number().gt(0).lte(999),
   shelfLifeHours: shelfLifeHours,
   batchNumber: z.string().min(1).max(5),
   station: stationEnum.nullable(),
