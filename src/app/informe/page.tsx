@@ -3,7 +3,7 @@ import { createServerClient } from '@/lib/supabase'
 import { SidebarServer } from '@/components/SidebarServer'
 import { DatePicker } from '@/components/DatePicker'
 import { LogoutButton } from '@/components/LogoutButton'
-import { formatDateLabel, toLocalDateStr } from '@/lib/format'
+import { formatDateLabel, toLocalDateStr, toMadridIso } from '@/lib/format'
 import { type Station, type ExitReason } from '@/types/database'
 import { EXIT_REASON_LABELS, LOCALE, TIMEZONE } from '@/lib/constants'
 import { DemandaTable } from '@/components/DemandaTable'
@@ -68,8 +68,8 @@ export default async function InformePage({
       .select('exit_reason, quantity')
       .eq('kitchen_user_id', session.userId)
       .eq('reason', 'merma')
-      .gte('logged_at', dateFrom)
-      .lt('logged_at', dateToExclusive),
+      .gte('logged_at', toMadridIso(dateFrom, '00:00:00.000'))
+      .lt('logged_at', toMadridIso(dateToExclusive, '00:00:00.000')),
   ])
 
   if (summaryResult.error) return <pre className="p-8 text-red-500">{summaryResult.error.message}</pre>

@@ -113,7 +113,7 @@ export function HistorialClient({ days }: { days: DaySummary[] }): React.JSX.Ele
                 <p className="px-4 py-4 text-sm text-gray-400 md:px-6">Sense activitat registrada</p>
               ) : (
                 <ul className="divide-y divide-[#e5e3de]">
-                  {day.items.map((item, idx) =>
+                  {day.items.map((item) =>
                     item.kind === 'prep' ? (
                       <HistorialPrepRow
                         key={`prep-${item.data.production_id}`}
