@@ -3,7 +3,7 @@ import { createServerClient } from '@/lib/supabase'
 import { SidebarServer } from '@/components/SidebarServer'
 import { PrepListClient } from '@/components/PrepListClient'
 import { NewProductionButton } from '@/components/NewProductionButton'
-import { type StockActualHoy, type ActiveLot } from '@/types/database'
+import { type StockActualHoy, type ActiveLot, type Station } from '@/types/database'
 import { fetchExitedByBatch } from '@/lib/stock-helpers'
 
 const STOCK_COLUMNS = 'production_id, name, unit, shelf_life_hours, station, stock_total, next_expiry' as const
@@ -78,6 +78,21 @@ export default async function Home(): Promise<React.JSX.Element> {
 
   const lotsByProduction = buildLotsMap(logsResult.data)
   const expiredLotsByProduction = buildLotsMap(expiredLogsResult.data)
+
+  // Expired lots moved to a non-default station have no daily_stock row.
+  // Synthesize entries so they still appear in the UI.
+  const itemKeys = new Set(items.map((i) => `${i.production_id}:${i.station}`))
+  for (const key of Object.keys(expiredLotsByProduction)) {
+    if (itemKeys.has(key)) continue
+    const sep = key.indexOf(':')
+    const pid = key.slice(0, sep)
+    const station = key.slice(sep + 1) as Station
+    const base = items.find((i) => i.production_id === pid)
+    if (base) {
+      items.push({ ...base, station, stock_total: 0, next_expiry: null })
+      itemKeys.add(key)
+    }
+  }
 
   return (
     <div className="flex min-h-screen">
