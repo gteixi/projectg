@@ -65,9 +65,12 @@ export async function logProduction(
   station?: string | null,
 ): Promise<ProductionResult> {
   const parsed = logProductionSchema.safeParse({
-    productionId, quantity, shelfLifeHours, batchNumber, station: station ?? null,
+    productionId, quantity, shelfLifeHours: shelfLifeHours ?? null, batchNumber, station: station ?? null,
   })
-  if (!parsed.success) return { error: 'Dades invàlides', batch_number: null }
+  if (!parsed.success) {
+    const fields = parsed.error.issues.map(i => i.path.join('.')).join(', ')
+    return { error: `Dades invàlides (${fields})`, batch_number: null }
+  }
 
   const session = await requireAuth()
   const supabase = await createServerClient()

@@ -1,12 +1,14 @@
 import { z } from 'zod'
 
+const uuidLike = z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
+
 const stationEnum = z.enum(['Partida', 'Congelador', 'Camara', 'Timbre'])
 const saleReasonEnum = z.enum(['merma', 'venta'])
 const exitReasonEnum = z.enum(['accident', 'mal_estat', 'altre'])
 const unitEnum = z.enum(['kg', 'L', 'raciones'])
 
 const shelfLifeHours = z.union([
-  z.number().gt(0).lte(720),
+  z.number().gte(0).lte(720),
   z.null(),
 ])
 
@@ -15,7 +17,7 @@ export const pinSchema = z.object({
 })
 
 export const logProductionSchema = z.object({
-  productionId: z.string().uuid(),
+  productionId: uuidLike,
   quantity: z.number().gt(0).lte(10000),
   shelfLifeHours: shelfLifeHours,
   batchNumber: z.string().min(1).max(5),
@@ -32,11 +34,11 @@ export const createPrepSchema = z.object({
 })
 
 export const updatePrepSchema = createPrepSchema.extend({
-  id: z.string().uuid(),
+  id: uuidLike,
 })
 
 export const saleExitSchema = z.object({
-  productionId: z.string().uuid(),
+  productionId: uuidLike,
   quantity: z.number().gt(0),
   reason: saleReasonEnum,
   lots: z.array(
@@ -49,14 +51,14 @@ export const saleExitSchema = z.object({
 })
 
 export const moveLotsSchema = z.object({
-  productionId: z.string().uuid(),
+  productionId: uuidLike,
   logIds: z.array(z.string()).nonempty(),
   targetStation: stationEnum,
   unfreezeExpiryHours: z.number().gt(0).optional(),
 })
 
 export const extendLotSchema = z.object({
-  logId: z.string().uuid(),
+  logId: uuidLike,
 })
 
 export const deletePhotoSchema = z.object({
@@ -68,9 +70,9 @@ export const suggestShelfLifeSchema = z.object({
 })
 
 export const deactivateSchema = z.object({
-  id: z.string().uuid(),
+  id: uuidLike,
 })
 
 export const getRecipeSchema = z.object({
-  productionId: z.string().uuid(),
+  productionId: uuidLike,
 })
