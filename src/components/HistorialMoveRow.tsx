@@ -37,7 +37,7 @@ export function HistorialMoveRow({ name, unit, lot_count, to_station, entries, d
             </span>
           )}
         </span>
-        <span className="text-sm font-semibold text-right w-20 md:w-28 text-blue-600 truncate">
+        <span className="text-sm font-semibold text-left w-20 md:w-28 text-blue-600 truncate">
           → {to_station}
         </span>
       </li>
