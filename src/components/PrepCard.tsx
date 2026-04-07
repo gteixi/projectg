@@ -103,7 +103,7 @@ export function PrepCard({ item, initialLots, expiredLots, openMode, onSetMode, 
               - Surt
             </button>
             <button
-              onClick={() => onSetMode('move')}
+              onClick={() => { setShowLots(false); onSetMode('move') }}
               disabled={item.stock_total <= 0 && expiredLots.length === 0}
               className={`flex-1 h-14 rounded-xl border text-base font-semibold transition-colors ${
                 item.stock_total <= 0 && expiredLots.length === 0

@@ -26,7 +26,9 @@ export function PrepRow({ item, initialLots, expiredLots, openMode, onSetMode, o
   const [showInfo, setShowInfo] = useState(false)
 
   function toggle(mode: 'production' | 'sale' | 'move'): void {
-    onSetMode(openMode === mode ? null : mode)
+    const next = openMode === mode ? null : mode
+    if (next === 'move') setShowLots(false)
+    onSetMode(next)
   }
 
   return (

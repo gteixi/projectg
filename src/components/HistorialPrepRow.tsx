@@ -1,7 +1,5 @@
 'use client'
 
-import { useState } from 'react'
-
 export type LogDetail = {
   lot_number: string | null
   quantity: number
@@ -15,17 +13,17 @@ type Props = {
   unit: string
   lot_count: number
   entries: LogDetail[]
-  defaultOpen?: boolean
+  open: boolean
+  onToggle: () => void
 }
 
-export function HistorialPrepRow({ name, total_produced, unit, lot_count, entries, defaultOpen = false }: Props) {
-  const [open, setOpen] = useState(defaultOpen)
+export function HistorialPrepRow({ name, total_produced, unit, lot_count, entries, open, onToggle }: Props) {
 
   return (
     <>
       <li
         className={`grid grid-cols-[auto_1fr_56px_112px] md:grid-cols-[12px_1fr_56px_112px] items-center gap-x-3 px-4 py-3 md:px-6 cursor-pointer select-none transition-colors ${open ? 'bg-gray-50' : 'hover:bg-gray-50'}`}
-        onClick={() => setOpen((v) => !v)}
+        onClick={onToggle}
       >
         <span className="w-3 h-3 rounded-full bg-gray-400" />
         <span className="text-base font-medium text-gray-900 min-w-0 truncate">{name}</span>

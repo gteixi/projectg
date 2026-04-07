@@ -1,7 +1,5 @@
 'use client'
 
-import { useState } from 'react'
-
 export type MoveDetail = {
   batch_number: string
   quantity: number
@@ -16,17 +14,17 @@ type Props = {
   lot_count: number
   to_station: string
   entries: MoveDetail[]
-  defaultOpen?: boolean
+  open: boolean
+  onToggle: () => void
 }
 
-export function HistorialMoveRow({ name, unit, lot_count, to_station, entries, defaultOpen = false }: Props) {
-  const [open, setOpen] = useState(defaultOpen)
+export function HistorialMoveRow({ name, unit, lot_count, to_station, entries, open, onToggle }: Props) {
 
   return (
     <>
       <li
         className={`grid grid-cols-[auto_1fr_56px_112px] md:grid-cols-[12px_1fr_56px_112px] items-center gap-x-3 px-4 py-3 md:px-6 cursor-pointer select-none transition-colors ${open ? 'bg-blue-50' : 'hover:bg-blue-50'}`}
-        onClick={() => setOpen((v) => !v)}
+        onClick={onToggle}
       >
         <span className="w-3 h-3 rounded-full bg-blue-400" />
         <span className="text-base font-medium text-gray-900 truncate min-w-0">{name}</span>

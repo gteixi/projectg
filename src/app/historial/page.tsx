@@ -210,7 +210,7 @@ export default async function HistorialPage({
             <DatePicker value={selectedDate} basePath="/historial" />
           </header>
 
-          <HistorialClient days={days} />
+          <HistorialClient days={days} today={today} />
         </div>
       </main>
     </div>
