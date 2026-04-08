@@ -2,8 +2,6 @@
 
 Kitchen production management SaaS. Track daily stock, log productions, and monitor expiry dates in real time.
 
-Built for 10" tablets in professional kitchen environments.
-
 ## Stack
 
 - Next.js 16 (App Router) + TypeScript
