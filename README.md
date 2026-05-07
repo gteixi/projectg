@@ -2,6 +2,10 @@
 
 Kitchen production management SaaS. Track daily stock, log productions, and monitor expiry dates in real time.
 
+https://projectg-git-main-gteixis-projects.vercel.app/login
+
+https://github.com/user-attachments/assets/87434289-435a-4460-ba94-895a428f4cb7
+
 ## Stack
 
 - Next.js 16 (App Router) + TypeScript
