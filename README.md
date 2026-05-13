@@ -4,6 +4,11 @@ Kitchen production management SaaS. Track daily stock, log productions, and moni
 
 https://github.com/user-attachments/assets/87434289-435a-4460-ba94-895a428f4cb7
 
+## DDBB
+
+<img width="2644" height="1622" alt="ddbb" src="https://github.com/user-attachments/assets/85ec018b-6e95-49e8-8343-0cd5d7295564" />
+
+
 ## Stack
 
 - Next.js 16 (App Router) + TypeScript
