@@ -34,7 +34,7 @@ export default async function LoginPage(): Promise<React.JSX.Element> {
   }
 
   return (
-    <div className="min-h-screen bg-[#f8f7f4] md:flex">
+    <div className="h-dvh overflow-hidden bg-[#f8f7f4] md:flex">
       <div className="fixed inset-0 md:hidden">
         <Image
           src="/images/pitarroja.jpg"
@@ -47,7 +47,7 @@ export default async function LoginPage(): Promise<React.JSX.Element> {
         <div className="absolute inset-0 bg-black/35" />
       </div>
 
-      <div className="hidden md:block relative w-1/2 min-h-screen">
+      <div className="hidden md:block relative w-1/2 h-dvh">
         <Image
           src="/images/pitarroja.jpg"
           alt="Restaurant Pitarroja"
@@ -58,7 +58,7 @@ export default async function LoginPage(): Promise<React.JSX.Element> {
         />
       </div>
 
-      <div className="relative z-10 min-h-dvh flex items-center justify-center px-4 py-4 md:flex-1 md:py-0">
+      <div className="relative z-10 h-dvh flex items-center justify-center px-4 py-4 md:flex-1 md:py-0">
         <div className="w-full max-w-xs flex flex-col items-center bg-white/95 backdrop-blur-sm rounded-2xl p-5 md:bg-transparent md:backdrop-blur-none md:rounded-none md:p-0">
           <LoginFlow users={users} />
         </div>
