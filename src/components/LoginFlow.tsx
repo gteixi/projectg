@@ -18,7 +18,7 @@ export function LoginFlow({ users }: { users: User[] }): React.JSX.Element {
     return (
       <>
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Hola!</h1>
-        <p className="text-base text-gray-500 mb-8">Qui ets?</p>
+        <p className="text-base text-gray-500 mb-6">Qui ets?</p>
         <div className="w-full flex flex-col gap-3">
           {users.map((user) => (
             <button
@@ -39,12 +39,12 @@ export function LoginFlow({ users }: { users: User[] }): React.JSX.Element {
       <h1 className="text-3xl font-bold text-gray-900 mb-2">
         Hola, {selected.name}
       </h1>
-      <p className="text-base text-gray-500 mb-8">Introdueix el PIN</p>
+      <p className="text-base text-gray-500 mb-6">Introdueix el PIN</p>
       <PinPad onPendingChange={setPinPending} />
       {users.length > 1 && !pinPending && (
         <button
           onClick={() => setSelected(null)}
-          className="mt-6 text-base text-gray-400 hover:text-gray-600 transition-colors"
+          className="mt-4 text-base text-gray-400 hover:text-gray-600 transition-colors"
         >
           ← Canviar usuari
         </button>

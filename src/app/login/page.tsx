@@ -58,8 +58,8 @@ export default async function LoginPage(): Promise<React.JSX.Element> {
         />
       </div>
 
-      <div className="relative z-10 min-h-screen flex items-center justify-center px-4 md:flex-1">
-        <div className="w-full max-w-xs flex flex-col items-center bg-white/95 backdrop-blur-sm rounded-2xl p-6 md:bg-transparent md:backdrop-blur-none md:rounded-none md:p-0">
+      <div className="relative z-10 min-h-dvh flex items-center justify-center px-4 py-4 md:flex-1 md:py-0">
+        <div className="w-full max-w-xs flex flex-col items-center bg-white/95 backdrop-blur-sm rounded-2xl p-5 md:bg-transparent md:backdrop-blur-none md:rounded-none md:p-0">
           <LoginFlow users={users} />
         </div>
       </div>

@@ -38,12 +38,12 @@ export function PinPad({ onPendingChange }: { onPendingChange?: (pending: boolea
   }
 
   return (
-    <div className="w-full flex flex-col items-center gap-6">
+    <div className="w-full flex flex-col items-center gap-4">
       <div className="flex gap-3">
         {[0, 1, 2, 3].map((i) => (
           <div
             key={i}
-            className={`w-14 h-14 rounded-xl border-2 flex items-center justify-center text-2xl font-bold transition-colors ${
+            className={`w-12 h-12 rounded-xl border-2 flex items-center justify-center text-2xl font-bold transition-colors ${
               pin.length > i
                 ? 'border-gray-900 bg-gray-900 text-white'
                 : 'border-[#e5e3de] bg-white text-transparent'
@@ -56,7 +56,7 @@ export function PinPad({ onPendingChange }: { onPendingChange?: (pending: boolea
 
       {error && <p className="text-red-600 text-base font-semibold">{error}</p>}
 
-      <div className="grid grid-cols-3 gap-3 w-full">
+      <div className="grid grid-cols-3 gap-2 w-full">
         {KEYS.map((key, i) => {
           if (key === '') return <div key={i} />
           if (key === 'del') {
@@ -65,7 +65,7 @@ export function PinPad({ onPendingChange }: { onPendingChange?: (pending: boolea
                 key={i}
                 onClick={() => handleKey('del')}
                 disabled={pending || pin.length === 0}
-                className="h-16 rounded-xl bg-gray-200 text-gray-700 text-lg font-semibold hover:bg-gray-300 disabled:opacity-30 transition-colors"
+                className="h-14 rounded-xl bg-gray-200 text-gray-700 text-lg font-semibold hover:bg-gray-300 disabled:opacity-30 transition-colors"
               >
                 ←
               </button>
@@ -76,7 +76,7 @@ export function PinPad({ onPendingChange }: { onPendingChange?: (pending: boolea
               key={i}
               onClick={() => handleKey(key)}
               disabled={pending}
-              className="h-16 rounded-xl bg-white border border-[#e5e3de] text-gray-900 text-2xl font-semibold hover:bg-gray-50 active:bg-gray-100 disabled:opacity-50 transition-colors"
+              className="h-14 rounded-xl bg-white border border-[#e5e3de] text-gray-900 text-2xl font-semibold hover:bg-gray-50 active:bg-gray-100 disabled:opacity-50 transition-colors"
             >
               {key}
             </button>
