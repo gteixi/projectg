@@ -2,6 +2,7 @@ import { getSession } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { createServerClient } from '@/lib/supabase'
 import { LoginFlow } from '@/components/LoginFlow'
+import Image from 'next/image'
 
 export default async function LoginPage(): Promise<React.JSX.Element> {
   const session = await getSession()
@@ -33,9 +34,34 @@ export default async function LoginPage(): Promise<React.JSX.Element> {
   }
 
   return (
-    <div className="min-h-screen bg-[#f8f7f4] flex items-center justify-center px-4">
-      <div className="w-full max-w-xs flex flex-col items-center">
-        <LoginFlow users={users} />
+    <div className="min-h-screen bg-[#f8f7f4] md:flex">
+      <div className="fixed inset-0 md:hidden">
+        <Image
+          src="/images/pitarroja.jpg"
+          alt="Restaurant Pitarroja"
+          fill
+          priority
+          className="object-cover"
+          sizes="100vw"
+        />
+        <div className="absolute inset-0 bg-black/35" />
+      </div>
+
+      <div className="hidden md:block relative w-1/2 min-h-screen">
+        <Image
+          src="/images/pitarroja.jpg"
+          alt="Restaurant Pitarroja"
+          fill
+          priority
+          className="object-cover"
+          sizes="50vw"
+        />
+      </div>
+
+      <div className="relative z-10 min-h-screen flex items-center justify-center px-4 md:flex-1">
+        <div className="w-full max-w-xs flex flex-col items-center bg-white/95 backdrop-blur-sm rounded-2xl p-6 md:bg-transparent md:backdrop-blur-none md:rounded-none md:p-0">
+          <LoginFlow users={users} />
+        </div>
       </div>
     </div>
   )
